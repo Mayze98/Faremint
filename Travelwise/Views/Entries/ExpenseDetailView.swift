@@ -1,8 +1,14 @@
 import SwiftUI
+import SwiftData
 
 struct ExpenseDetailView: View {
     let expense: Expense
     let currencyCode: String
+    var categories: [ExpenseCategory] = []
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingEditSheet = false
+    @State private var showingDeleteConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -108,12 +114,51 @@ struct ExpenseDetailView: View {
                     .padding(20)
                     .background(.background, in: RoundedRectangle(cornerRadius: 16))
                 }
+
+                // Delete button
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        Label("Delete Expense", systemImage: "trash")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                }
             }
             .padding()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Expense Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingEditSheet = true
+                } label: {
+                    Text("Edit")
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            EditExpenseSheet(
+                expense: expense,
+                categories: categories.isEmpty ? BaseCategory.allCases.map { ExpenseCategory(base: $0) } : categories,
+                currencyCode: currencyCode
+            )
+        }
+        .alert("Delete Expense", isPresented: $showingDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                modelContext.delete(expense)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete \"\(expense.title)\"? This cannot be undone.")
+        }
     }
 
     private var categoryIcon: String {

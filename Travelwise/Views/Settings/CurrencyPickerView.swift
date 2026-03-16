@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CurrencyPickerView: View {
-    @AppStorage("currencyCode") private var currencyCode = "USD"
+    @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var searchText = ""
     @Environment(\.dismiss) private var dismiss
 

@@ -25,16 +25,19 @@ struct ExpenseCategory: Codable, Hashable, Identifiable {
     let name: String
     let systemImage: String
     let isCustom: Bool
+    var budgetLimit: Double?
 
-    init(base: BaseCategory) {
+    init(base: BaseCategory, budgetLimit: Double? = nil) {
         self.name = base.rawValue
         self.systemImage = base.systemImage
         self.isCustom = false
+        self.budgetLimit = budgetLimit
     }
 
-    init(customName: String, systemImage: String = "tag.fill") {
+    init(customName: String, systemImage: String = "tag.fill", budgetLimit: Double? = nil) {
         self.name = customName
         self.systemImage = systemImage
         self.isCustom = true
+        self.budgetLimit = budgetLimit
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct AddExpenseSheet: View {
     let trip: Trip
@@ -50,7 +51,8 @@ struct AddExpenseSheet: View {
                 ExpenseCalculatorView(
                     amount: $amount,
                     isSplitting: $isSplitting,
-                    splitPercent: $splitPercent
+                    splitPercent: $splitPercent,
+                    currencyCode: trip.currency
                 )
 
                 Section("Notes") {

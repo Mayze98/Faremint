@@ -102,13 +102,14 @@ enum BubbleLayoutCalculator {
         return placements
     }
 
-    /// Calculates bubble radius from budget relative to other trips.
-    static func radius(for budget: Double, allBudgets: [Double], minRadius: CGFloat = 35, maxRadius: CGFloat = 70) -> CGFloat {
-        guard let maxBudget = allBudgets.max(), maxBudget > 0 else { return minRadius }
-        let minBudget = allBudgets.min() ?? 0
-        let range = maxBudget - minBudget
+    /// Calculates bubble radius based on the trip's spend ratio (totalSpent / budget).
+    /// Trips that have spent a larger proportion of their budget get bigger bubbles.
+    static func radius(forSpendRatio ratio: Double, allRatios: [Double], minRadius: CGFloat = 40, maxRadius: CGFloat = 75) -> CGFloat {
+        guard let maxRatio = allRatios.max(), maxRatio > 0 else { return minRadius }
+        let minRatio = allRatios.min() ?? 0
+        let range = maxRatio - minRatio
         guard range > 0 else { return (minRadius + maxRadius) / 2 }
-        let normalized = (budget - minBudget) / range
+        let normalized = (ratio - minRatio) / range
         return minRadius + CGFloat(normalized) * (maxRadius - minRadius)
     }
 }

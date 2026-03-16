@@ -3,6 +3,7 @@ import SwiftUI
 struct TotalExpensesCard: View {
     let totalExpenses: Double
     let currencyCode: String
+    var subtitle: String = "Across all trips"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -14,7 +15,7 @@ struct TotalExpensesCard: View {
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
 
-            Text("Across all trips")
+            Text(subtitle)
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
         }

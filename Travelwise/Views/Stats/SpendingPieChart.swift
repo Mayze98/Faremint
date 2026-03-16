@@ -11,13 +11,10 @@ struct CategoryTotal: Identifiable {
 struct SpendingPieChart: View {
     let categoryTotals: [CategoryTotal]
 
-    private var chartColors: [String: Color] {
-        var colors: [String: Color] = [:]
-        let defaultColors: [Color] = [.orange, .blue, .purple, .cyan, .pink, .green, .yellow, .brown]
-        for (index, cat) in categoryTotals.enumerated() {
-            colors[cat.name] = Theme.categoryColors[cat.name] ?? defaultColors[index % defaultColors.count]
-        }
-        return colors
+    private static let defaultColors: [Color] = [.orange, .blue, .purple, .cyan, .pink, .green, .yellow, .brown]
+
+    private func colorFor(_ name: String, at index: Int) -> Color {
+        Theme.categoryColors[name] ?? Self.defaultColors[index % Self.defaultColors.count]
     }
 
     var body: some View {
@@ -42,17 +39,20 @@ struct SpendingPieChart: View {
                     .cornerRadius(4)
                     .foregroundStyle(by: .value("Category", item.name))
                 }
-                .chartForegroundStyleScale(chartColors)
+                .chartForegroundStyleScale(domain: categoryTotals.map(\.name)) { name in
+                    let index = categoryTotals.firstIndex { $0.name == name } ?? 0
+                    return colorFor(name, at: index)
+                }
                 .chartLegend(position: .bottom, alignment: .center, spacing: 12)
                 .frame(height: 220)
                 .padding(.horizontal)
 
-                // Percentage labels around chart
+                // Percentage labels
                 HStack(spacing: 8) {
-                    ForEach(categoryTotals.prefix(5)) { cat in
+                    ForEach(Array(categoryTotals.prefix(5).enumerated()), id: \.element.id) { index, cat in
                         HStack(spacing: 4) {
                             Circle()
-                                .fill(chartColors[cat.name] ?? .gray)
+                                .fill(colorFor(cat.name, at: index))
                                 .frame(width: 8, height: 8)
                             Text("\(cat.name) \(Int(cat.percentage))%")
                                 .font(.caption2)

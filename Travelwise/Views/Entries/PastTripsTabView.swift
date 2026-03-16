@@ -9,24 +9,63 @@ struct PastTripsTabView: View {
         allTrips.filter { $0.isPast }
     }
 
+    private var tripsByYear: [(year: Int, trips: [Trip])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: pastTrips) { trip in
+            calendar.component(.year, from: trip.startDate)
+        }
+        return grouped
+            .map { (year: $0.key, trips: $0.value.sorted { ($0.startDate) > ($1.startDate) }) }
+            .sorted { $0.year > $1.year }
+    }
+
     var body: some View {
         NavigationStack {
-            List {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Past Trips")
+                        .font(.largeTitle.weight(.bold))
+                    Text("Your completed adventures")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal)
+                .padding(.top)
+
                 if pastTrips.isEmpty {
+                    Spacer()
                     emptyState
+                    Spacer()
                 } else {
-                    ForEach(pastTrips) { trip in
-                        NavigationLink {
-                            TripDetailView(trip: trip)
-                        } label: {
-                            PastTripRow(trip: trip)
+                    List {
+                        ForEach(tripsByYear, id: \.year) { group in
+                            Section {
+                                ForEach(group.trips) { trip in
+                                    NavigationLink {
+                                        TripDetailView(trip: trip)
+                                    } label: {
+                                        PastTripRow(trip: trip)
+                                    }
+                                    .tint(.primary)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            modelContext.delete(trip)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            } header: {
+                                Text(String(group.year))
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .textCase(nil)
+                            }
                         }
-                        .tint(.primary)
                     }
-                    .onDelete(perform: deleteTrips)
                 }
             }
-            .navigationTitle("Past Trips")
+            .background(Color(.systemGroupedBackground))
         }
     }
 
@@ -43,15 +82,8 @@ struct PastTripsTabView: View {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-        .listRowBackground(Color.clear)
     }
 
-    private func deleteTrips(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(pastTrips[index])
-        }
-    }
 }
 
 private struct PastTripRow: View {

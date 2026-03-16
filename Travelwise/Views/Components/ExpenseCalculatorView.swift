@@ -4,6 +4,7 @@ struct ExpenseCalculatorView: View {
     @Binding var amount: String
     @Binding var isSplitting: Bool
     @Binding var splitPercent: Double
+    var currencyCode: String = "CAD"
 
     private var amountValue: Double {
         Double(amount) ?? 0
@@ -43,7 +44,7 @@ struct ExpenseCalculatorView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text(finalAmount, format: .currency(code: "USD"))
+                        Text(finalAmount, format: .currency(code: currencyCode))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.accentTeal)
                     }

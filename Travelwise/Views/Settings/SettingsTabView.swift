@@ -1,6 +1,10 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsTabView: View {
+    @Query private var trips: [Trip]
+    @AppStorage("appearanceMode") private var appearanceMode = 0
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -27,6 +31,7 @@ struct SettingsTabView: View {
                                 subtitle: "Edit your personal information"
                             )
                         }
+                        .tint(.primary)
                         Divider()
                         NavigationLink {
                             Text("Notifications")
@@ -38,6 +43,7 @@ struct SettingsTabView: View {
                                 subtitle: "Manage your alerts"
                             )
                         }
+                        .tint(.primary)
                     }
 
                     // Preferences section
@@ -49,13 +55,22 @@ struct SettingsTabView: View {
                                 icon: "globe",
                                 iconColor: .blue,
                                 title: "Currency",
-                                subtitle: "\(UserDefaults.standard.string(forKey: "currencyCode") ?? "USD") - \(CurrencyHelper.commonCurrencies.first { $0.code == (UserDefaults.standard.string(forKey: "currencyCode") ?? "USD") }?.name ?? "US Dollar")"
+                                subtitle: "\(UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD") - \(CurrencyHelper.commonCurrencies.first { $0.code == (UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD") }?.name ?? "Canadian Dollar")"
                             )
                         }
+                        .tint(.primary)
                         Divider()
-                        NavigationLink {
-                            Text("Export Data")
-                        } label: {
+                        if let url = CSVExporter.csvFileURL(for: trips) {
+                            ShareLink(item: url, preview: SharePreview("Travelwise Export", image: Image(systemName: "doc.text"))) {
+                                SettingsRowView(
+                                    icon: "arrow.down.circle",
+                                    iconColor: .blue,
+                                    title: "Export Data",
+                                    subtitle: "Download your trips as CSV"
+                                )
+                            }
+                            .tint(.primary)
+                        } else {
                             SettingsRowView(
                                 icon: "arrow.down.circle",
                                 iconColor: .blue,
@@ -63,6 +78,34 @@ struct SettingsTabView: View {
                                 subtitle: "Download your trips as CSV"
                             )
                         }
+                        Divider()
+                        HStack(spacing: 14) {
+                            Image(systemName: appearanceMode == 2 ? "moon.fill" : "sun.max.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.blue)
+                                .frame(width: 36, height: 36)
+                                .background(Color.blue.opacity(0.12))
+                                .clipShape(Circle())
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Appearance")
+                                    .font(.subheadline.weight(.medium))
+                                Text(appearanceMode == 0 ? "System" : appearanceMode == 1 ? "Light" : "Dark")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Picker("", selection: $appearanceMode) {
+                                Image(systemName: "iphone").tag(0)
+                                Image(systemName: "sun.max.fill").tag(1)
+                                Image(systemName: "moon.fill").tag(2)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 120)
+                        }
+                        .padding(.vertical, 8)
                     }
 
                     // Support section
@@ -77,6 +120,7 @@ struct SettingsTabView: View {
                                 subtitle: "Get help with Travelwise"
                             )
                         }
+                        .tint(.primary)
                         Divider()
                         NavigationLink {
                             Text("Terms & Privacy")
@@ -88,6 +132,7 @@ struct SettingsTabView: View {
                                 subtitle: "Legal information"
                             )
                         }
+                        .tint(.primary)
                     }
 
                     // Version

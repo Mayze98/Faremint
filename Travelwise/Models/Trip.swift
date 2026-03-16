@@ -24,10 +24,15 @@ final class Trip {
         return (totalSpent / budget) * 100
     }
 
+    var isPast: Bool {
+        guard let endDate else { return false }
+        return endDate < Calendar.current.startOfDay(for: .now)
+    }
+
     init(
         name: String,
         budget: Double,
-        currency: String = "USD",
+        currency: String = "CAD",
         startDate: Date = .now,
         endDate: Date? = nil,
         colorHex: String = "4ECDC4",

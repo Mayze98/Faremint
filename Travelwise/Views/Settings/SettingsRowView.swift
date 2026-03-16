@@ -11,7 +11,7 @@ struct SettingsRowView: View {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(iconColor)
-                .frame(width: 34, height: 34)
+                .frame(width: 36, height: 36)
                 .background(iconColor.opacity(0.12))
                 .clipShape(Circle())
 
@@ -22,6 +22,7 @@ struct SettingsRowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .frame(maxHeight: .infinity)
 
             Spacer()
 
@@ -29,7 +30,7 @@ struct SettingsRowView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 }
 

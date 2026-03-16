@@ -2,10 +2,14 @@ import SwiftUI
 import SwiftData
 
 struct EntriesTabView: View {
-    @Query(sort: \Trip.createdAt, order: .reverse) private var trips: [Trip]
+    @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddTrip = false
     @State private var selectedTrip: Trip?
+
+    private var trips: [Trip] {
+        allTrips.filter { !$0.isPast }
+    }
 
     var body: some View {
         NavigationStack {

@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		526E28C82F68AF24000DE26C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 526E28C72F68AF24000DE26C /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		526E28B62F68ACD9000DE26C /* Travelwise.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Travelwise.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		526E28C72F68AF24000DE26C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +39,7 @@
 			children = (
 				526E28B82F68ACD9000DE26C /* Travelwise */,
 				526E28B72F68ACD9000DE26C /* Products */,
+				526E28C72F68AF24000DE26C /* README.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				526E28C82F68AF24000DE26C /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

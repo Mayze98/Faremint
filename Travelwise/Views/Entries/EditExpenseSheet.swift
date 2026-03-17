@@ -11,8 +11,6 @@ struct EditExpenseSheet: View {
     @State private var amount: String
     @State private var selectedCategory: String
     @State private var note: String
-    @State private var isSplitting: Bool
-    @State private var splitPercent: Double
     @State private var photoData: Data?
 
     init(expense: Expense, categories: [ExpenseCategory], currencyCode: String) {
@@ -23,20 +21,11 @@ struct EditExpenseSheet: View {
         _amount = State(initialValue: String(format: "%.2f", expense.originalAmount))
         _selectedCategory = State(initialValue: expense.categoryName)
         _note = State(initialValue: expense.note)
-        _isSplitting = State(initialValue: expense.splitPercent != nil)
-        _splitPercent = State(initialValue: expense.splitPercent ?? 50)
         _photoData = State(initialValue: expense.photoData)
     }
 
     private var amountValue: Double {
         Double(amount) ?? 0
-    }
-
-    private var finalAmount: Double {
-        if isSplitting {
-            return amountValue * (splitPercent / 100)
-        }
-        return amountValue
     }
 
     private var canSave: Bool {
@@ -46,23 +35,19 @@ struct EditExpenseSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Details") {
-                    TextField("Expense title", text: $title)
-
-                    Picker("Category", selection: $selectedCategory) {
-                        ForEach(categories) { category in
-                            Label(category.name, systemImage: category.systemImage)
-                                .tag(category.name)
-                        }
-                    }
+                Section("Amount") {
+                    TextField("0.00", text: $amount)
+                        .keyboardType(.decimalPad)
+                        .font(.title2.weight(.semibold))
                 }
 
-                ExpenseCalculatorView(
-                    amount: $amount,
-                    isSplitting: $isSplitting,
-                    splitPercent: $splitPercent,
-                    currencyCode: currencyCode
-                )
+                Section("Details") {
+                    TextField("Expense title", text: $title)
+                }
+
+                Section("Category") {
+                    categoryGrid
+                }
 
                 Section("Notes") {
                     TextField("Add a note (optional)", text: $note, axis: .vertical)
@@ -87,11 +72,56 @@ struct EditExpenseSheet: View {
         }
     }
 
+    private var categoryGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
+            ForEach(categories) { category in
+                Button {
+                    selectedCategory = category.name
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: category.systemImage)
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                selectedCategory == category.name
+                                    ? Theme.colorForCategory(category.name).opacity(0.2)
+                                    : Color(.systemGray6)
+                            )
+                            .foregroundStyle(
+                                selectedCategory == category.name
+                                    ? Theme.colorForCategory(category.name)
+                                    : .secondary
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(
+                                        selectedCategory == category.name
+                                            ? Theme.colorForCategory(category.name)
+                                            : .clear,
+                                        lineWidth: 2
+                                    )
+                            )
+
+                        Text(category.name)
+                            .font(.caption2)
+                            .lineLimit(1)
+                            .foregroundStyle(
+                                selectedCategory == category.name ? .primary : .secondary
+                            )
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
     private func applyChanges() {
         expense.title = title.trimmingCharacters(in: .whitespaces)
         expense.originalAmount = amountValue
-        expense.amount = finalAmount
-        expense.splitPercent = isSplitting ? splitPercent : nil
+        expense.amount = amountValue
+        expense.splitPercent = nil
         expense.categoryName = selectedCategory
         expense.note = note.trimmingCharacters(in: .whitespaces)
         expense.photoData = photoData

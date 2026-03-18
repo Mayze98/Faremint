@@ -5,11 +5,18 @@ struct EntriesTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddTrip = false
+    @State private var showingAddExpense = false
+    @State private var showingEditTrip = false
     @State private var showingBubbles = false
-    @State private var selectedTrip: Trip?
+    @State private var displayedTrip: Trip?
 
     private var trips: [Trip] {
         allTrips.filter { !$0.isPast }
+    }
+
+    private var currentYearTrips: [Trip] {
+        let year = Calendar.current.component(.year, from: .now)
+        return trips.filter { Calendar.current.component(.year, from: $0.startDate) == year }
     }
 
     private var latestTrip: Trip? {
@@ -63,56 +70,75 @@ struct EntriesTabView: View {
                     .frame(maxWidth: .infinity)
                     Spacer()
                 } else if showingBubbles {
-                    BubbleClusterView(trips: trips) { trip in
-                        showingBubbles = false
-                        selectedTrip = trip
+                    BubbleClusterView(trips: currentYearTrips) { trip in
+                        displayedTrip = trip
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showingBubbles = false
+                        }
                     }
                     .padding()
-                } else if let latest = selectedTrip ?? latestTrip {
-                    // Trip selector chips
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(trips) { trip in
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        selectedTrip = trip
+                } else if let current = displayedTrip ?? latestTrip {
+                    // Trip selector chips + edit button
+                    HStack(spacing: 0) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(trips) { trip in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            displayedTrip = trip
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Circle()
+                                                .fill(Color(hex: trip.colorHex))
+                                                .frame(width: 10, height: 10)
+                                            Text(trip.name)
+                                                .font(.subheadline.weight(.medium))
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            (displayedTrip ?? latestTrip)?.persistentModelID == trip.persistentModelID
+                                                ? Color(hex: trip.colorHex).opacity(0.15)
+                                                : Color(.systemGray6)
+                                        )
+                                        .foregroundStyle(
+                                            (displayedTrip ?? latestTrip)?.persistentModelID == trip.persistentModelID
+                                                ? Color(hex: trip.colorHex)
+                                                : .secondary
+                                        )
+                                        .clipShape(Capsule())
                                     }
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Circle()
-                                            .fill(Color(hex: trip.colorHex))
-                                            .frame(width: 10, height: 10)
-                                        Text(trip.name)
-                                            .font(.subheadline.weight(.medium))
-                                    }
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        (selectedTrip ?? latestTrip)?.persistentModelID == trip.persistentModelID
-                                            ? Color(hex: trip.colorHex).opacity(0.15)
-                                            : Color(.systemGray6)
-                                    )
-                                    .foregroundStyle(
-                                        (selectedTrip ?? latestTrip)?.persistentModelID == trip.persistentModelID
-                                            ? Color(hex: trip.colorHex)
-                                            : .secondary
-                                    )
-                                    .clipShape(Capsule())
                                 }
                             }
+                            .padding(.leading)
+                            .padding(.vertical, 12)
                         }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
+
+                        Button {
+                            showingEditTrip = true
+                        } label: {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(Theme.accentTeal)
+                        }
+                        .padding(.horizontal, 12)
                     }
 
                     // Inline trip detail
-                    TripDetailInlineView(trip: latest)
+                    TripDetailInlineView(trip: current)
                 }
             }
             .background(Color(.systemGroupedBackground))
             .overlay(alignment: .bottomTrailing) {
                 Button {
-                    showingAddTrip = true
+                    if showingBubbles || trips.isEmpty {
+                        withAnimation(.easeInOut(duration: 0.35)) {
+                            showingAddTrip = true
+                        }
+                    } else {
+                        showingAddExpense = true
+                    }
                 } label: {
                     Image(systemName: "plus")
                         .font(.title2.weight(.semibold))
@@ -124,11 +150,22 @@ struct EntriesTabView: View {
                 .padding(.trailing, 24)
                 .padding(.bottom, 24)
             }
-            .sheet(isPresented: $showingAddTrip) {
-                AddTripSheet()
+            .overlay {
+                if showingAddTrip {
+                    AddTripFlowView(isPresented: $showingAddTrip)
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
             }
-            .navigationDestination(item: $selectedTrip) { trip in
-                TripDetailView(trip: trip)
+            .sheet(isPresented: $showingAddExpense) {
+                if let current = displayedTrip ?? latestTrip {
+                    AddExpenseSheet(trip: current)
+                }
+            }
+            .sheet(isPresented: $showingEditTrip) {
+                if let current = displayedTrip ?? latestTrip {
+                    EditTripSheet(trip: current)
+                }
             }
         }
     }
@@ -136,7 +173,7 @@ struct EntriesTabView: View {
 
 /// Inline version of trip detail shown directly in the entries tab
 struct TripDetailInlineView: View {
-    let trip: Trip
+    @Bindable var trip: Trip
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddExpense = false
 

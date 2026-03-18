@@ -6,7 +6,7 @@ struct PhotoPickerSection: View {
     @State private var selectedItem: PhotosPickerItem?
 
     var body: some View {
-        Section("Receipt Photo") {
+        Section("Photo") {
             if let imageData, let uiImage = UIImage(data: imageData) {
                 Image(uiImage: uiImage)
                     .resizable()

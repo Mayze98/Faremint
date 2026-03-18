@@ -2,9 +2,16 @@ import SwiftUI
 import SwiftData
 
 struct StatsTabView: View {
-    @Query(sort: \Trip.createdAt, order: .reverse) private var trips: [Trip]
+    @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var selectedTripID: PersistentIdentifier?
+
+    private var trips: [Trip] {
+        let currentYear = Calendar.current.component(.year, from: .now)
+        return allTrips.filter {
+            Calendar.current.component(.year, from: $0.startDate) == currentYear && !$0.isPast
+        }
+    }
 
     private var selectedTrip: Trip? {
         guard let id = selectedTripID else { return nil }
@@ -26,6 +33,16 @@ struct StatsTabView: View {
         relevantExpenses.reduce(0) { $0 + $1.amount }
     }
 
+    private var expensesByCategory: [(category: String, systemImage: String, expenses: [Expense], total: Double)] {
+        guard let trip = selectedTrip else { return [] }
+        let grouped = Dictionary(grouping: trip.expenses) { $0.categoryName }
+        return trip.categories.compactMap { category in
+            guard let expenses = grouped[category.name], !expenses.isEmpty else { return nil }
+            let total = expenses.reduce(0) { $0 + $1.amount }
+            return (category.name, category.systemImage, expenses.sorted { $0.createdAt > $1.createdAt }, total)
+        }.sorted { $0.total > $1.total }
+    }
+
     private var categoryTotals: [CategoryTotal] {
         var totals: [String: Double] = [:]
         for expense in relevantExpenses {
@@ -43,7 +60,7 @@ struct StatsTabView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 20) {
                     // Header
                     VStack(alignment: .leading, spacing: 4) {
@@ -57,7 +74,7 @@ struct StatsTabView: View {
 
                     // Trip picker
                     if !trips.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        ScrollView(.horizontal) {
                             HStack(spacing: 10) {
                                 TripFilterChip(
                                     title: "All Trips",
@@ -78,6 +95,7 @@ struct StatsTabView: View {
                             }
                             .padding(.horizontal)
                         }
+                        .scrollIndicators(.hidden)
                     }
 
                     // Total expenses card
@@ -95,12 +113,73 @@ struct StatsTabView: View {
                     // Category breakdown
                     CategoryBreakdownList(categoryTotals: categoryTotals, currencyCode: displayCurrency)
                         .padding(.horizontal)
+
+                    // Expenses grouped by category (when a trip is selected)
+                    if selectedTrip != nil && !expensesByCategory.isEmpty {
+                        expenseListSection
+                            .padding(.horizontal)
+                    }
                 }
                 .padding(.top)
                 .padding(.bottom, 20)
             }
             .background(Color(.systemGroupedBackground))
         }
+    }
+
+    private var expenseListSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Expenses")
+                .font(.headline)
+                .padding(.horizontal)
+
+            VStack(spacing: 0) {
+                ForEach(expensesByCategory, id: \.category) { group in
+                    // Category header
+                    HStack(spacing: 8) {
+                        Image(systemName: group.systemImage)
+                            .font(.caption)
+                            .foregroundStyle(Theme.colorForCategory(group.category))
+                        Text(group.category)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(CurrencyHelper.format(group.total, code: displayCurrency))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 14)
+                    .padding(.bottom, 6)
+
+                    // Expenses in this category
+                    ForEach(group.expenses) { expense in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(expense.title)
+                                    .font(.subheadline)
+                                Text(expense.createdAt, format: .dateTime.month(.abbreviated).day())
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Spacer()
+                            Text(CurrencyHelper.format(expense.amount, code: displayCurrency))
+                                .font(.subheadline.weight(.medium))
+                                .monospacedDigit()
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 6)
+                    }
+
+                    if group.category != expensesByCategory.last?.category {
+                        Divider()
+                            .padding(.horizontal)
+                            .padding(.top, 4)
+                    }
+                }
+            }
+        }
+        .padding(.vertical)
+        .background(.background, in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

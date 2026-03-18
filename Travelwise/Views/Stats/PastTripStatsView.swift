@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct PastTripStatsView: View {
     @Bindable var trip: Trip

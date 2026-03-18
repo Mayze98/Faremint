@@ -4,6 +4,8 @@ import SwiftData
 struct EditTripSheet: View {
     let trip: Trip
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @State private var showingDeleteConfirmation = false
 
     @State private var name: String
     @State private var budget: String
@@ -85,6 +87,27 @@ struct EditTripSheet: View {
                 }
 
                 categoriesSection
+
+                Section {
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Delete Trip")
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .alert("Delete Trip", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    modelContext.delete(trip)
+                    dismiss()
+                }
+            } message: {
+                Text("Are you sure you want to delete \"\(trip.name)\"? This will also delete all expenses for this trip. This cannot be undone.")
             }
             .navigationTitle("Edit Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -227,6 +250,11 @@ struct EditTripSheet: View {
 }
 
 #Preview {
-    EditTripSheet(trip: Trip(name: "Tokyo Adventure", budget: 5000))
+    let trip: Trip = {
+        let t = Trip(name: "Tokyo Adventure", budget: 5000)
+        SampleData.container.mainContext.insert(t)
+        return t
+    }()
+    EditTripSheet(trip: trip)
         .modelContainer(SampleData.container)
 }

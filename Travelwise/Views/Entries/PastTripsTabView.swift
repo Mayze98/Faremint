@@ -42,7 +42,7 @@ struct PastTripsTabView: View {
                             Section {
                                 ForEach(group.trips) { trip in
                                     NavigationLink {
-                                        TripDetailView(trip: trip)
+                                        PastTripStatsView(trip: trip)
                                     } label: {
                                         PastTripRow(trip: trip)
                                     }

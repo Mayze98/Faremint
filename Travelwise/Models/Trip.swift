@@ -25,8 +25,12 @@ final class Trip {
     }
 
     var isPast: Bool {
-        guard let endDate else { return false }
-        return endDate < Calendar.current.startOfDay(for: .now)
+        let calendar = Calendar.current
+        // A trip is past if its end date has passed, or if it didn't start in the current year
+        if let endDate, endDate < calendar.startOfDay(for: .now) {
+            return true
+        }
+        return calendar.component(.year, from: startDate) < calendar.component(.year, from: .now)
     }
 
     init(

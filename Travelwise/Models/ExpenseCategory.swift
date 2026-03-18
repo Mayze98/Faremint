@@ -6,6 +6,7 @@ enum BaseCategory: String, Codable, CaseIterable, Identifiable {
     case sightseeing = "Sightseeing"
     case flight = "Flight"
     case hotels = "Hotels"
+    case souvenir = "Souvenir"
 
     var id: String { rawValue }
 
@@ -16,6 +17,7 @@ enum BaseCategory: String, Codable, CaseIterable, Identifiable {
         case .sightseeing: "binoculars.fill"
         case .flight: "airplane"
         case .hotels: "bed.double.fill"
+        case .souvenir: "gift.fill"
         }
     }
 }

@@ -3,8 +3,8 @@ import SwiftData
 
 struct AddTripFlowView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @AppStorage("currencyCode") private var currencyCode = "CAD"
+    @Binding var isPresented: Bool
 
     // Flow state
     @State private var step = 0
@@ -22,7 +22,6 @@ struct AddTripFlowView: View {
 
     // Trip options
     @State private var startDate = Date.now
-    @State private var hasEndDate = false
     @State private var endDate = Date.now.addingTimeInterval(7 * 24 * 3600)
     @State private var selectedColorIndex = Int.random(in: 0..<8)
 
@@ -62,7 +61,9 @@ struct AddTripFlowView: View {
                                 step -= 1
                             }
                         } else {
-                            dismiss()
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                isPresented = false
+                            }
                         }
                     } label: {
                         Image(systemName: step > 0 ? "chevron.left" : "xmark")
@@ -188,17 +189,52 @@ struct AddTripFlowView: View {
             }
 
             // Date pickers
-            VStack(spacing: 8) {
-                DatePicker("Start date", selection: $startDate, displayedComponents: .date)
-                    .font(.subheadline)
-                Toggle("Set end date", isOn: $hasEndDate)
-                    .font(.subheadline)
-                if hasEndDate {
-                    DatePicker("End date", selection: $endDate, in: startDate..., displayedComponents: .date)
-                        .font(.subheadline)
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Start")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(startDate, format: .dateTime.month(.abbreviated).day().year())
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            DatePicker("", selection: $startDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .colorMultiply(.clear)
+                                .allowsHitTesting(true)
+                        }
+                }
+
+                Image(systemName: "arrow.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 22)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("End")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(endDate, format: .dateTime.month(.abbreviated).day().year())
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            DatePicker("", selection: $endDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .colorMultiply(.clear)
+                                .allowsHitTesting(true)
+                        }
                 }
             }
             .padding(.horizontal, 32)
+            .onChange(of: startDate) { _, newStart in
+                if endDate < newStart {
+                    endDate = newStart.addingTimeInterval(24 * 3600)
+                }
+            }
         }
         .padding(.horizontal)
     }
@@ -217,17 +253,16 @@ struct AddTripFlowView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 4) {
+            HStack(spacing: 2) {
                 Text(currencySymbol)
-                    .font(.largeTitle.weight(.bold))
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
                 TextField("0", text: $budget)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.5)
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            .padding(.horizontal, 40)
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal)
     }
@@ -396,9 +431,17 @@ struct AddTripFlowView: View {
 
     private func autoAllocateBudget() {
         let budget = budgetValue
+        var allocated: Double = 0
+        // Allocate using floor to avoid exceeding budget
         for (categoryName, percent) in Self.allocationPercents {
-            let amount = (budget * percent).rounded()
+            let amount = (budget * percent).rounded(.down)
             categoryLimits[categoryName] = String(Int(amount))
+            allocated += amount
+        }
+        // Assign any remainder to Hotels (largest category)
+        let remainder = budget - allocated
+        if remainder > 0, let current = Double(categoryLimits["Hotels"] ?? "0") {
+            categoryLimits["Hotels"] = String(Int(current + remainder))
         }
     }
 
@@ -427,16 +470,19 @@ struct AddTripFlowView: View {
             budget: budgetValue,
             currency: currencyCode,
             startDate: startDate,
-            endDate: hasEndDate ? endDate : nil,
+            endDate: endDate,
             colorHex: Theme.bubblePalette[selectedColorIndex],
             categories: allCategories
         )
         modelContext.insert(trip)
-        dismiss()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            isPresented = false
+        }
     }
 }
 
 #Preview {
-    AddTripFlowView()
+    @Previewable @State var showing = true
+    AddTripFlowView(isPresented: $showing)
         .modelContainer(SampleData.container)
 }

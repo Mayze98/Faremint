@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct TripDetailView: View {
-    let trip: Trip
+    @Bindable var trip: Trip
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddExpense = false
@@ -201,8 +201,13 @@ struct TripDetailView: View {
 }
 
 #Preview {
+    let trip: Trip = {
+        let t = Trip(name: "Tokyo Adventure", budget: 5000, colorHex: "45B7D1")
+        SampleData.container.mainContext.insert(t)
+        return t
+    }()
     NavigationStack {
-        TripDetailView(trip: Trip(name: "Tokyo Adventure", budget: 5000))
+        TripDetailView(trip: trip)
     }
     .modelContainer(SampleData.container)
 }

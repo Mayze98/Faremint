@@ -122,11 +122,17 @@ struct AddExpenseSheet: View {
             trip: trip
         )
         modelContext.insert(expense)
+        trip.expenses.append(expense)
         dismiss()
     }
 }
 
 #Preview {
-    AddExpenseSheet(trip: Trip(name: "Test", budget: 1000))
+    let trip: Trip = {
+        let t = Trip(name: "Test", budget: 1000)
+        SampleData.container.mainContext.insert(t)
+        return t
+    }()
+    AddExpenseSheet(trip: trip)
         .modelContainer(SampleData.container)
 }

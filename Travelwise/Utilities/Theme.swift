@@ -15,7 +15,8 @@ enum Theme {
         "Transportation": .blue,
         "Sightseeing": .purple,
         "Flight": .cyan,
-        "Hotels": .pink
+        "Hotels": .pink,
+        "Souvenir": .green
     ]
 
     static let bubblePalette: [String] = [

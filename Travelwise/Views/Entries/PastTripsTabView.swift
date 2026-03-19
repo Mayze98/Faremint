@@ -4,20 +4,7 @@ import SwiftData
 struct PastTripsTabView: View {
     @Query(sort: \Trip.endDate, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
-
-    private var pastTrips: [Trip] {
-        allTrips.filter { $0.isPast }
-    }
-
-    private var tripsByYear: [(year: Int, trips: [Trip])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: pastTrips) { trip in
-            calendar.component(.year, from: trip.startDate)
-        }
-        return grouped
-            .map { (year: $0.key, trips: $0.value.sorted { ($0.startDate) > ($1.startDate) }) }
-            .sorted { $0.year > $1.year }
-    }
+    @State private var viewModel = PastTripsViewModel()
 
     var body: some View {
         NavigationStack {
@@ -32,13 +19,13 @@ struct PastTripsTabView: View {
                 .padding(.horizontal)
                 .padding(.top)
 
-                if pastTrips.isEmpty {
+                if viewModel.pastTrips(from: allTrips).isEmpty {
                     Spacer()
                     emptyState
                     Spacer()
                 } else {
                     List {
-                        ForEach(tripsByYear, id: \.year) { group in
+                        ForEach(viewModel.tripsByYear(from: allTrips), id: \.year) { group in
                             Section {
                                 ForEach(group.trips) { trip in
                                     NavigationLink {
@@ -49,7 +36,7 @@ struct PastTripsTabView: View {
                                     .tint(.primary)
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                         Button(role: .destructive) {
-                                            modelContext.delete(trip)
+                                            viewModel.deleteTrip(trip, modelContext: modelContext)
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }

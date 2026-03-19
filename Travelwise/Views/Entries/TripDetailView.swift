@@ -10,18 +10,11 @@ struct TripDetailView: View {
     @State private var showingDeleteTrip = false
     @State private var showingEditTrip = false
 
-    private var budgetProgress: Double {
-        guard trip.budget > 0 else { return 0 }
-        return min(trip.totalSpent / trip.budget, 1.0)
-    }
+    @State private var viewModel: TripDetailViewModel
 
-    private var expensesByCategory: [(category: String, expenses: [Expense], total: Double, limit: Double?)] {
-        let grouped = Dictionary(grouping: trip.expenses) { $0.categoryName }
-        return trip.categories.compactMap { category in
-            guard let expenses = grouped[category.name], !expenses.isEmpty else { return nil }
-            let total = expenses.reduce(0) { $0 + $1.amount }
-            return (category.name, expenses.sorted { $0.createdAt > $1.createdAt }, total, category.budgetLimit)
-        }.sorted { $0.total > $1.total }
+    init(trip: Trip) {
+        self.trip = trip
+        _viewModel = State(initialValue: TripDetailViewModel(trip: trip))
     }
 
     var body: some View {
@@ -71,7 +64,7 @@ struct TripDetailView: View {
         .alert("Move to Past Trips?", isPresented: $showingMoveToPast) {
             Button("Cancel", role: .cancel) { }
             Button("Move") {
-                trip.endDate = Calendar.current.date(byAdding: .day, value: -1, to: .now)
+                viewModel.moveToPast()
                 dismiss()
             }
         } message: {
@@ -80,7 +73,7 @@ struct TripDetailView: View {
         .alert("Delete Trip?", isPresented: $showingDeleteTrip) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                modelContext.delete(trip)
+                viewModel.deleteTrip(modelContext: modelContext)
                 dismiss()
             }
         } message: {
@@ -116,8 +109,8 @@ struct TripDetailView: View {
                     }
                 }
 
-                ProgressView(value: budgetProgress)
-                    .tint(budgetProgress > 0.9 ? .red : (budgetProgress > 0.7 ? .orange : Theme.accentTeal))
+                ProgressView(value: viewModel.budgetProgress)
+                    .tint(viewModel.budgetProgress > 0.9 ? .red : (viewModel.budgetProgress > 0.7 ? .orange : Theme.accentTeal))
 
                 HStack {
                     Text("\(Int(trip.budgetUsedPercent))% used")
@@ -135,7 +128,7 @@ struct TripDetailView: View {
 
     @ViewBuilder
     private var expensesSection: some View {
-        if expensesByCategory.isEmpty {
+        if viewModel.expensesByCategory.isEmpty {
             Section {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
@@ -149,7 +142,7 @@ struct TripDetailView: View {
                 .padding(.vertical, 20)
             }
         } else {
-            ForEach(expensesByCategory, id: \.category) { group in
+            ForEach(viewModel.expensesByCategory, id: \.category) { group in
                 Section {
                     ForEach(group.expenses) { expense in
                         NavigationLink {
@@ -160,7 +153,7 @@ struct TripDetailView: View {
                         .tint(.primary)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
-                                modelContext.delete(expense)
+                                viewModel.deleteExpense(expense, modelContext: modelContext)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }

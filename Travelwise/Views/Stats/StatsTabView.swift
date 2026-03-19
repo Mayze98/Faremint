@@ -4,59 +4,7 @@ import SwiftData
 struct StatsTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @AppStorage("currencyCode") private var currencyCode = "CAD"
-    @State private var selectedTripID: PersistentIdentifier?
-
-    private var trips: [Trip] {
-        let currentYear = Calendar.current.component(.year, from: .now)
-        return allTrips.filter {
-            Calendar.current.component(.year, from: $0.startDate) == currentYear && !$0.isPast
-        }
-    }
-
-    private var selectedTrip: Trip? {
-        guard let id = selectedTripID else { return nil }
-        return trips.first { $0.persistentModelID == id }
-    }
-
-    private var relevantExpenses: [Expense] {
-        if let trip = selectedTrip {
-            return trip.expenses
-        }
-        return trips.flatMap(\.expenses)
-    }
-
-    private var displayCurrency: String {
-        selectedTrip?.currency ?? currencyCode
-    }
-
-    private var totalExpenses: Double {
-        relevantExpenses.reduce(0) { $0 + $1.amount }
-    }
-
-    private var expensesByCategory: [(category: String, systemImage: String, expenses: [Expense], total: Double)] {
-        guard let trip = selectedTrip else { return [] }
-        let grouped = Dictionary(grouping: trip.expenses) { $0.categoryName }
-        return trip.categories.compactMap { category in
-            guard let expenses = grouped[category.name], !expenses.isEmpty else { return nil }
-            let total = expenses.reduce(0) { $0 + $1.amount }
-            return (category.name, category.systemImage, expenses.sorted { $0.createdAt > $1.createdAt }, total)
-        }.sorted { $0.total > $1.total }
-    }
-
-    private var categoryTotals: [CategoryTotal] {
-        var totals: [String: Double] = [:]
-        for expense in relevantExpenses {
-            totals[expense.categoryName, default: 0] += expense.amount
-        }
-        let grandTotal = totals.values.reduce(0, +)
-        return totals.map { name, total in
-            CategoryTotal(
-                name: name,
-                total: total,
-                percentage: grandTotal > 0 ? (total / grandTotal) * 100 : 0
-            )
-        }.sorted { $0.total > $1.total }
-    }
+    @State private var viewModel = StatsViewModel()
 
     var body: some View {
         NavigationStack {
@@ -73,23 +21,23 @@ struct StatsTabView: View {
                     .padding(.horizontal)
 
                     // Trip picker
-                    if !trips.isEmpty {
+                    if !viewModel.trips(from: allTrips).isEmpty {
                         ScrollView(.horizontal) {
                             HStack(spacing: 10) {
                                 TripFilterChip(
                                     title: "All Trips",
-                                    isSelected: selectedTripID == nil
+                                    isSelected: viewModel.selectedTripID == nil
                                 ) {
-                                    selectedTripID = nil
+                                    viewModel.clearFilter()
                                 }
 
-                                ForEach(trips) { trip in
+                                ForEach(viewModel.trips(from: allTrips)) { trip in
                                     TripFilterChip(
                                         title: trip.name,
                                         color: Color(hex: trip.colorHex),
-                                        isSelected: selectedTripID == trip.persistentModelID
+                                        isSelected: viewModel.selectedTripID == trip.persistentModelID
                                     ) {
-                                        selectedTripID = trip.persistentModelID
+                                        viewModel.selectTrip(trip)
                                     }
                                 }
                             }
@@ -100,22 +48,22 @@ struct StatsTabView: View {
 
                     // Total expenses card
                     TotalExpensesCard(
-                        totalExpenses: totalExpenses,
-                        currencyCode: displayCurrency,
-                        subtitle: selectedTrip == nil ? "Across all trips" : selectedTrip!.name
+                        totalExpenses: viewModel.totalExpenses(from: allTrips),
+                        currencyCode: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode),
+                        subtitle: viewModel.selectedTrip(from: allTrips) == nil ? "Across all trips" : viewModel.selectedTrip(from: allTrips)!.name
                     )
                     .padding(.horizontal)
 
                     // Pie chart
-                    SpendingPieChart(categoryTotals: categoryTotals)
+                    SpendingPieChart(categoryTotals: viewModel.categoryTotals(from: allTrips))
                         .padding(.horizontal)
 
                     // Category breakdown
-                    CategoryBreakdownList(categoryTotals: categoryTotals, currencyCode: displayCurrency)
+                    CategoryBreakdownList(categoryTotals: viewModel.categoryTotals(from: allTrips), currencyCode: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode))
                         .padding(.horizontal)
 
                     // Expenses grouped by category (when a trip is selected)
-                    if selectedTrip != nil && !expensesByCategory.isEmpty {
+                    if viewModel.selectedTrip(from: allTrips) != nil && !viewModel.expensesByCategory(from: allTrips).isEmpty {
                         expenseListSection
                             .padding(.horizontal)
                     }
@@ -134,7 +82,8 @@ struct StatsTabView: View {
                 .padding(.horizontal)
 
             VStack(spacing: 0) {
-                ForEach(expensesByCategory, id: \.category) { group in
+                let groups = viewModel.expensesByCategory(from: allTrips)
+                ForEach(groups, id: \.category) { group in
                     // Category header
                     HStack(spacing: 8) {
                         Image(systemName: group.systemImage)
@@ -143,7 +92,7 @@ struct StatsTabView: View {
                         Text(group.category)
                             .font(.subheadline.weight(.semibold))
                         Spacer()
-                        Text(CurrencyHelper.format(group.total, code: displayCurrency))
+                        Text(CurrencyHelper.format(group.total, code: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode)))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
@@ -162,7 +111,7 @@ struct StatsTabView: View {
                                     .foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            Text(CurrencyHelper.format(expense.amount, code: displayCurrency))
+                            Text(CurrencyHelper.format(expense.amount, code: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode)))
                                 .font(.subheadline.weight(.medium))
                                 .monospacedDigit()
                         }
@@ -170,7 +119,7 @@ struct StatsTabView: View {
                         .padding(.vertical, 6)
                     }
 
-                    if group.category != expensesByCategory.last?.category {
+                    if group.category != groups.last?.category {
                         Divider()
                             .padding(.horizontal)
                             .padding(.top, 4)

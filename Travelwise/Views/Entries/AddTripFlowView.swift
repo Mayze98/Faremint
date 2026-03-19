@@ -6,45 +6,13 @@ struct AddTripFlowView: View {
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @Binding var isPresented: Bool
 
-    // Flow state
-    @State private var step = 0
+    @State private var viewModel: AddTripFlowViewModel
 
-    // Step 1: Name
-    @State private var name = ""
-
-    // Step 2: Budget
-    @State private var budget = ""
-
-    // Step 3: Category limits (auto-filled then editable)
-    @State private var categoryLimits: [String: String] = [:]
-    @State private var customCategoryName = ""
-    @State private var customCategories: [ExpenseCategory] = []
-
-    // Trip options
-    @State private var startDate = Date.now
-    @State private var endDate = Date.now.addingTimeInterval(7 * 24 * 3600)
-    @State private var selectedColorIndex = Int.random(in: 0..<8)
-
-    // Auto-allocation percentages for built-in categories
-    private static let allocationPercents: [String: Double] = [
-        "Hotels": 0.30,
-        "Flight": 0.25,
-        "Food & Drinks": 0.20,
-        "Sightseeing": 0.10,
-        "Transportation": 0.10,
-        "Souvenir": 0.05
-    ]
-
-    private var budgetValue: Double {
-        Double(budget) ?? 0
-    }
-
-    private var totalCategoryLimits: Double {
-        categoryLimits.values.compactMap { Double($0) }.reduce(0, +)
-    }
-
-    private var remainingBudget: Double {
-        budgetValue - totalCategoryLimits
+    init(isPresented: Binding<Bool>) {
+        _isPresented = isPresented
+        _viewModel = State(initialValue: AddTripFlowViewModel(
+            currencyCode: UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD"
+        ))
     }
 
     var body: some View {
@@ -56,17 +24,15 @@ struct AddTripFlowView: View {
                 // Top bar
                 HStack {
                     Button {
-                        if step > 0 {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                step -= 1
-                            }
-                        } else {
-                            withAnimation(.easeInOut(duration: 0.35)) {
-                                isPresented = false
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            if viewModel.goBack() {
+                                withAnimation(.easeInOut(duration: 0.35)) {
+                                    isPresented = false
+                                }
                             }
                         }
                     } label: {
-                        Image(systemName: step > 0 ? "chevron.left" : "xmark")
+                        Image(systemName: viewModel.step > 0 ? "chevron.left" : "xmark")
                             .font(.title3.weight(.medium))
                             .foregroundStyle(.secondary)
                             .frame(width: 40, height: 40)
@@ -78,9 +44,9 @@ struct AddTripFlowView: View {
                     HStack(spacing: 6) {
                         ForEach(0..<3) { i in
                             Capsule()
-                                .fill(i <= step ? Theme.accentTeal : Color(.systemGray4))
-                                .frame(width: i == step ? 24 : 8, height: 8)
-                                .animation(.easeInOut(duration: 0.3), value: step)
+                                .fill(i <= viewModel.step ? Theme.accentTeal : Color(.systemGray4))
+                                .frame(width: i == viewModel.step ? 24 : 8, height: 8)
+                                .animation(.easeInOut(duration: 0.3), value: viewModel.step)
                         }
                     }
 
@@ -96,7 +62,7 @@ struct AddTripFlowView: View {
 
                 // Step content
                 Group {
-                    switch step {
+                    switch viewModel.step {
                     case 0:
                         stepNameView
                             .transition(.asymmetric(
@@ -119,7 +85,7 @@ struct AddTripFlowView: View {
                         EmptyView()
                     }
                 }
-                .animation(.easeInOut(duration: 0.35), value: step)
+                .animation(.easeInOut(duration: 0.35), value: viewModel.step)
 
                 Spacer()
 
@@ -127,14 +93,14 @@ struct AddTripFlowView: View {
                 Button {
                     handleNext()
                 } label: {
-                    Text(step == 2 ? "Create Trip" : "Next")
+                    Text(viewModel.step == 2 ? "Create Trip" : "Next")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(nextButtonEnabled ? Theme.accentTeal : Color(.systemGray4), in: RoundedRectangle(cornerRadius: 16))
+                        .background(viewModel.nextButtonEnabled ? Theme.accentTeal : Color(.systemGray4), in: RoundedRectangle(cornerRadius: 16))
                 }
-                .disabled(!nextButtonEnabled)
+                .disabled(!viewModel.nextButtonEnabled)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
             }
@@ -153,7 +119,7 @@ struct AddTripFlowView: View {
                 .font(.title.weight(.bold))
                 .multilineTextAlignment(.center)
 
-            TextField("e.g. Tokyo, Bali, Paris", text: $name)
+            TextField("e.g. Tokyo, Bali, Paris", text: $viewModel.name)
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -173,7 +139,7 @@ struct AddTripFlowView: View {
                             .fill(Color(hex: hex))
                             .frame(width: 32, height: 32)
                             .overlay {
-                                if index == selectedColorIndex {
+                                if index == viewModel.selectedColorIndex {
                                     Circle()
                                         .strokeBorder(.white, lineWidth: 2.5)
                                     Circle()
@@ -182,7 +148,7 @@ struct AddTripFlowView: View {
                                 }
                             }
                             .onTapGesture {
-                                selectedColorIndex = index
+                                viewModel.selectedColorIndex = index
                             }
                     }
                 }
@@ -194,13 +160,13 @@ struct AddTripFlowView: View {
                     Text("Start")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(startDate, format: .dateTime.month(.abbreviated).day().year())
+                    Text(viewModel.startDate, format: .dateTime.month(.abbreviated).day().year())
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
                         .overlay {
-                            DatePicker("", selection: $startDate, displayedComponents: .date)
+                            DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
                                 .labelsHidden()
                                 .colorMultiply(.clear)
                                 .allowsHitTesting(true)
@@ -216,13 +182,13 @@ struct AddTripFlowView: View {
                     Text("End")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(endDate, format: .dateTime.month(.abbreviated).day().year())
+                    Text(viewModel.endDate, format: .dateTime.month(.abbreviated).day().year())
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
                         .overlay {
-                            DatePicker("", selection: $endDate, displayedComponents: .date)
+                            DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
                                 .labelsHidden()
                                 .colorMultiply(.clear)
                                 .allowsHitTesting(true)
@@ -230,10 +196,8 @@ struct AddTripFlowView: View {
                 }
             }
             .padding(.horizontal, 32)
-            .onChange(of: startDate) { _, newStart in
-                if endDate < newStart {
-                    endDate = newStart.addingTimeInterval(24 * 3600)
-                }
+            .onChange(of: viewModel.startDate) { _, _ in
+                viewModel.ensureEndDateAfterStart()
             }
         }
         .padding(.horizontal)
@@ -249,15 +213,15 @@ struct AddTripFlowView: View {
                 .font(.title.weight(.bold))
                 .multilineTextAlignment(.center)
 
-            Text(name)
+            Text(viewModel.name)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 2) {
-                Text(currencySymbol)
+                Text(viewModel.currencySymbol)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
-                TextField("0", text: $budget)
+                TextField("0", text: $viewModel.budget)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .keyboardType(.decimalPad)
                     .fixedSize(horizontal: true, vertical: false)
@@ -273,7 +237,7 @@ struct AddTripFlowView: View {
                 Text("Review your budget")
                     .font(.title2.weight(.bold))
 
-                Text("\(CurrencyHelper.format(budgetValue, code: currencyCode)) for \(name)")
+                Text("\(CurrencyHelper.format(viewModel.budgetValue, code: currencyCode)) for \(viewModel.name)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -289,7 +253,7 @@ struct AddTripFlowView: View {
                         Divider().padding(.leading, 44)
                     }
 
-                    ForEach(customCategories) { category in
+                    ForEach(viewModel.customCategories) { category in
                         HStack(spacing: 12) {
                             Image(systemName: category.systemImage)
                                 .foregroundStyle(.gray)
@@ -297,14 +261,13 @@ struct AddTripFlowView: View {
                             Text(category.name)
                                 .font(.subheadline)
                             Spacer()
-                            TextField("0", text: categoryLimitBinding(for: category.name))
+                            TextField("0", text: viewModel.categoryLimitBinding(for: category.name))
                                 .keyboardType(.decimalPad)
                                 .font(.subheadline.weight(.semibold))
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 80)
                             Button {
-                                categoryLimits.removeValue(forKey: category.name)
-                                customCategories.removeAll { $0.id == category.id }
+                                viewModel.removeCustomCategory(category)
                             } label: {
                                 Image(systemName: "minus.circle.fill")
                                     .foregroundStyle(.red)
@@ -321,18 +284,15 @@ struct AddTripFlowView: View {
                         Image(systemName: "tag.fill")
                             .foregroundStyle(.gray)
                             .frame(width: 28)
-                        TextField("Add custom category", text: $customCategoryName)
+                        TextField("Add custom category", text: $viewModel.customCategoryName)
                             .font(.subheadline)
                         Button {
-                            let trimmed = customCategoryName.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty else { return }
-                            customCategories.append(ExpenseCategory(customName: trimmed))
-                            customCategoryName = ""
+                            viewModel.addCustomCategory()
                         } label: {
                             Image(systemName: "plus.circle.fill")
                                 .foregroundStyle(Theme.accentTeal)
                         }
-                        .disabled(customCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(viewModel.customCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 10)
@@ -353,7 +313,7 @@ struct AddTripFlowView: View {
             Text(name)
                 .font(.subheadline)
             Spacer()
-            TextField("0", text: categoryLimitBinding(for: name))
+            TextField("0", text: viewModel.categoryLimitBinding(for: name))
                 .keyboardType(.decimalPad)
                 .font(.subheadline.weight(.semibold))
                 .multilineTextAlignment(.trailing)
@@ -365,20 +325,20 @@ struct AddTripFlowView: View {
 
     private var allocationSummary: some View {
         VStack(spacing: 6) {
-            ProgressView(value: min(totalCategoryLimits / max(budgetValue, 1), 1.0))
-                .tint(remainingBudget < 0 ? .red : (remainingBudget == 0 ? Theme.accentTeal : .orange))
+            ProgressView(value: min(viewModel.totalCategoryLimits / max(viewModel.budgetValue, 1), 1.0))
+                .tint(viewModel.remainingBudget < 0 ? .red : (viewModel.remainingBudget == 0 ? Theme.accentTeal : .orange))
 
             HStack {
-                Text("Allocated: \(CurrencyHelper.format(totalCategoryLimits, code: currencyCode))")
+                Text("Allocated: \(CurrencyHelper.format(viewModel.totalCategoryLimits, code: currencyCode))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                if remainingBudget > 0 {
-                    Text("\(CurrencyHelper.format(remainingBudget, code: currencyCode)) left")
+                if viewModel.remainingBudget > 0 {
+                    Text("\(CurrencyHelper.format(viewModel.remainingBudget, code: currencyCode)) left")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else if remainingBudget < 0 {
-                    Text("Over by \(CurrencyHelper.format(-remainingBudget, code: currencyCode))")
+                } else if viewModel.remainingBudget < 0 {
+                    Text("Over by \(CurrencyHelper.format(-viewModel.remainingBudget, code: currencyCode))")
                         .font(.caption)
                         .foregroundStyle(.red)
                 } else {
@@ -393,90 +353,12 @@ struct AddTripFlowView: View {
 
     // MARK: - Logic
 
-    private var currencySymbol: String {
-        let locale = Locale.current
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currencyCode
-        formatter.locale = locale
-        return formatter.currencySymbol ?? "$"
-    }
-
-    private var nextButtonEnabled: Bool {
-        switch step {
-        case 0: !name.trimmingCharacters(in: .whitespaces).isEmpty
-        case 1: budgetValue > 0
-        case 2: remainingBudget >= 0
-        default: false
-        }
-    }
-
     private func handleNext() {
-        switch step {
-        case 0:
-            withAnimation(.easeInOut(duration: 0.35)) {
-                step = 1
-            }
-        case 1:
-            autoAllocateBudget()
-            withAnimation(.easeInOut(duration: 0.35)) {
-                step = 2
-            }
-        case 2:
-            saveTrip()
-        default:
-            break
-        }
-    }
-
-    private func autoAllocateBudget() {
-        let budget = budgetValue
-        var allocated: Double = 0
-        // Allocate using floor to avoid exceeding budget
-        for (categoryName, percent) in Self.allocationPercents {
-            let amount = (budget * percent).rounded(.down)
-            categoryLimits[categoryName] = String(Int(amount))
-            allocated += amount
-        }
-        // Assign any remainder to Hotels (largest category)
-        let remainder = budget - allocated
-        if remainder > 0, let current = Double(categoryLimits["Hotels"] ?? "0") {
-            categoryLimits["Hotels"] = String(Int(current + remainder))
-        }
-    }
-
-    private func categoryLimitBinding(for name: String) -> Binding<String> {
-        Binding(
-            get: { categoryLimits[name, default: ""] },
-            set: { categoryLimits[name] = $0 }
-        )
-    }
-
-    private func limitValue(for name: String) -> Double? {
-        guard let text = categoryLimits[name], let value = Double(text), value > 0 else { return nil }
-        return value
-    }
-
-    private func saveTrip() {
-        let baseCategories = BaseCategory.allCases.map {
-            ExpenseCategory(base: $0, budgetLimit: limitValue(for: $0.rawValue))
-        }
-        let customWithLimits = customCategories.map {
-            ExpenseCategory(customName: $0.name, systemImage: $0.systemImage, budgetLimit: limitValue(for: $0.name))
-        }
-        let allCategories = baseCategories + customWithLimits
-        let trip = Trip(
-            name: name.trimmingCharacters(in: .whitespaces),
-            budget: budgetValue,
-            currency: currencyCode,
-            startDate: startDate,
-            endDate: endDate,
-            colorHex: Theme.bubblePalette[selectedColorIndex],
-            categories: allCategories
-        )
-        modelContext.insert(trip)
         withAnimation(.easeInOut(duration: 0.35)) {
-            isPresented = false
+            if viewModel.handleNext() {
+                viewModel.saveTrip(modelContext: modelContext)
+                isPresented = false
+            }
         }
     }
 }

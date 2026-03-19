@@ -144,4 +144,5 @@ struct EntriesTabView: View {
 #Preview {
     EntriesTabView()
         .modelContainer(SampleData.container)
+        .environment(FirestoreService())
 }

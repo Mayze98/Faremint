@@ -3,6 +3,9 @@ import SwiftData
 
 @Model
 final class Trip {
+    /// Stable ID used to match this record with its Firestore document.
+    /// Set once on creation; never changes.
+    var firestoreID: String
     var name: String
     var budget: Double
     var currency: String
@@ -11,6 +14,8 @@ final class Trip {
     var colorHex: String
     var categories: [ExpenseCategory]
     var createdAt: Date
+    /// Timestamp of the last write so the sync merge can resolve conflicts.
+    var updatedAt: Date
 
     @Relationship(deleteRule: .cascade, inverse: \Expense.trip)
     var expenses: [Expense]
@@ -34,14 +39,18 @@ final class Trip {
     }
 
     init(
+        firestoreID: String = UUID().uuidString,
         name: String,
         budget: Double,
         currency: String = "CAD",
         startDate: Date = .now,
         endDate: Date? = nil,
         colorHex: String = "4ECDC4",
-        categories: [ExpenseCategory] = BaseCategory.allCases.map { ExpenseCategory(base: $0) }
+        categories: [ExpenseCategory] = BaseCategory.allCases.map { ExpenseCategory(base: $0) },
+        createdAt: Date = .now,
+        updatedAt: Date = .now
     ) {
+        self.firestoreID = firestoreID
         self.name = name
         self.budget = budget
         self.currency = currency
@@ -50,6 +59,7 @@ final class Trip {
         self.colorHex = colorHex
         self.categories = categories
         self.expenses = []
-        self.createdAt = .now
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 }

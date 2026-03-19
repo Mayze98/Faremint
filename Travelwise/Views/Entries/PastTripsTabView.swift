@@ -4,6 +4,7 @@ import SwiftData
 struct PastTripsTabView: View {
     @Query(sort: \Trip.endDate, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
+    @Environment(FirestoreService.self) private var firestoreService
     @State private var viewModel = PastTripsViewModel()
 
     var body: some View {
@@ -36,7 +37,7 @@ struct PastTripsTabView: View {
                                     .tint(.primary)
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                         Button(role: .destructive) {
-                                            viewModel.deleteTrip(trip, modelContext: modelContext)
+                                            viewModel.deleteTrip(trip, modelContext: modelContext, firestoreService: firestoreService)
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
@@ -120,4 +121,5 @@ private struct PastTripRow: View {
 #Preview {
     PastTripsTabView()
         .modelContainer(SampleData.container)
+        .environment(FirestoreService())
 }

@@ -14,6 +14,7 @@ Travelwise is a simple and intuitive budgeting app designed to help travelers ma
     - Sightseeing
     - Flights
     - Hotels
+    - Souvenirs
 
 - **Custom Categories**
   - Users can create their own categories to better fit their travel needs.
@@ -42,6 +43,8 @@ Travelwise is a simple and intuitive budgeting app designed to help travelers ma
 - Swift
 - SwiftUI
 - iOS
+- Swift Data (ModelContainer) for local persistence
+- Firebase (FirebaseApp) for backend services and authentication
 
 ## License
 

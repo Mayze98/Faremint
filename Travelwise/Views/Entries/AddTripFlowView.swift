@@ -3,6 +3,7 @@ import SwiftData
 
 struct AddTripFlowView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(FirestoreService.self) private var firestoreService
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @Binding var isPresented: Bool
 
@@ -356,7 +357,7 @@ struct AddTripFlowView: View {
     private func handleNext() {
         withAnimation(.easeInOut(duration: 0.35)) {
             if viewModel.handleNext() {
-                viewModel.saveTrip(modelContext: modelContext)
+                viewModel.saveTrip(modelContext: modelContext, firestoreService: firestoreService)
                 isPresented = false
             }
         }
@@ -367,4 +368,5 @@ struct AddTripFlowView: View {
     @Previewable @State var showing = true
     AddTripFlowView(isPresented: $showing)
         .modelContainer(SampleData.container)
+        .environment(FirestoreService())
 }

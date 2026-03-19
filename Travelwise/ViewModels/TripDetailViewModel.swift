@@ -23,11 +23,13 @@ final class TripDetailViewModel {
         }.sorted { $0.total > $1.total }
     }
 
-    func deleteExpense(_ expense: Expense, modelContext: ModelContext) {
+    func deleteExpense(_ expense: Expense, modelContext: ModelContext, firestoreService: FirestoreService) {
+        firestoreService.deleteExpense(firestoreID: expense.firestoreID, tripFirestoreID: trip.firestoreID)
         modelContext.delete(expense)
     }
 
-    func deleteTrip(modelContext: ModelContext) {
+    func deleteTrip(modelContext: ModelContext, firestoreService: FirestoreService) {
+        firestoreService.deleteTrip(firestoreID: trip.firestoreID)
         modelContext.delete(trip)
     }
 

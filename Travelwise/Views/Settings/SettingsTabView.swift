@@ -2,8 +2,10 @@ import SwiftUI
 import SwiftData
 
 struct SettingsTabView: View {
+    @Environment(AuthService.self) private var authService
     @Query private var trips: [Trip]
     @AppStorage("appearanceMode") private var appearanceMode = 0
+    @State private var showingSignOutAlert = false
 
     var body: some View {
         NavigationStack {
@@ -135,6 +137,21 @@ struct SettingsTabView: View {
                         .tint(.primary)
                     }
 
+                    // Sign Out
+                    Button(role: .destructive) {
+                        showingSignOutAlert = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Sign Out")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                        }
+                        .padding(.vertical, 14)
+                        .background(.background, in: RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal)
+
                     // Version
                     Text("Travelwise v1.0.0")
                         .font(.caption)
@@ -145,6 +162,14 @@ struct SettingsTabView: View {
                 .padding(.top)
             }
             .background(Color(.systemGroupedBackground))
+            .alert("Sign Out", isPresented: $showingSignOutAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Sign Out", role: .destructive) {
+                    try? authService.signOut()
+                }
+            } message: {
+                Text("Are you sure you want to sign out?")
+            }
         }
     }
 }
@@ -174,4 +199,5 @@ struct SettingsSection<Content: View>: View {
 
 #Preview {
     SettingsTabView()
+        .environment(AuthService())
 }

@@ -126,7 +126,7 @@ final class AddTripFlowViewModel {
         }
     }
 
-    func saveTrip(modelContext: ModelContext) {
+    func saveTrip(modelContext: ModelContext, firestoreService: FirestoreService) {
         let baseCategories = BaseCategory.allCases.map {
             ExpenseCategory(base: $0, budgetLimit: limitValue(for: $0.rawValue))
         }
@@ -144,5 +144,6 @@ final class AddTripFlowViewModel {
             categories: allCategories
         )
         modelContext.insert(trip)
+        firestoreService.saveTrip(trip)
     }
 }

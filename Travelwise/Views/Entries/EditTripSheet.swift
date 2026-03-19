@@ -5,6 +5,7 @@ struct EditTripSheet: View {
     let trip: Trip
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(FirestoreService.self) private var firestoreService
     @State private var showingDeleteConfirmation = false
 
     @State private var name: String
@@ -103,6 +104,7 @@ struct EditTripSheet: View {
             .alert("Delete Trip", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
+                    firestoreService.deleteTrip(firestoreID: trip.firestoreID)
                     modelContext.delete(trip)
                     dismiss()
                 }
@@ -237,6 +239,7 @@ struct EditTripSheet: View {
         trip.startDate = startDate
         trip.endDate = hasEndDate ? endDate : nil
         trip.colorHex = Theme.bubblePalette[selectedColorIndex]
+        trip.updatedAt = .now
 
         let baseCategories = BaseCategory.allCases.map {
             ExpenseCategory(base: $0, budgetLimit: limitValue(for: $0.rawValue))
@@ -245,6 +248,7 @@ struct EditTripSheet: View {
             ExpenseCategory(customName: $0.name, systemImage: $0.systemImage, budgetLimit: limitValue(for: $0.name))
         }
         trip.categories = baseCategories + customWithLimits
+        firestoreService.saveTrip(trip)
         dismiss()
     }
 }
@@ -257,4 +261,5 @@ struct EditTripSheet: View {
     }()
     EditTripSheet(trip: trip)
         .modelContainer(SampleData.container)
+        .environment(FirestoreService())
 }

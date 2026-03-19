@@ -7,6 +7,7 @@ struct ExpenseDetailView: View {
     var categories: [ExpenseCategory] = []
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(FirestoreService.self) private var firestoreService
     @State private var showingEditSheet = false
     @State private var showingDeleteConfirmation = false
 
@@ -152,6 +153,9 @@ struct ExpenseDetailView: View {
         }
         .alert("Delete Expense", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
+                if let tripFID = expense.trip?.firestoreID {
+                    firestoreService.deleteExpense(firestoreID: expense.firestoreID, tripFirestoreID: tripFID)
+                }
                 modelContext.delete(expense)
                 dismiss()
             }
@@ -174,4 +178,5 @@ struct ExpenseDetailView: View {
             currencyCode: "USD"
         )
     }
+    .environment(FirestoreService())
 }

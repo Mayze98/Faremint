@@ -6,6 +6,7 @@ struct EditExpenseSheet: View {
     let categories: [ExpenseCategory]
     let currencyCode: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(FirestoreService.self) private var firestoreService
 
     @State private var viewModel: ExpenseFormViewModel
 
@@ -48,7 +49,7 @@ struct EditExpenseSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        viewModel.updateExpense()
+                        viewModel.updateExpense(firestoreService: firestoreService)
                         dismiss()
                     }
                     .disabled(!viewModel.canSave)

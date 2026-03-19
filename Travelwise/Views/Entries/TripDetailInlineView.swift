@@ -7,17 +7,33 @@ struct TripDetailInlineView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddExpense = false
 
+    // Live query so the list updates immediately when expenses are added/deleted
+    @Query private var expenses: [Expense]
+
+    init(trip: Trip) {
+        self.trip = trip
+        let id = trip.persistentModelID
+        _expenses = Query(
+            filter: #Predicate<Expense> { $0.trip?.persistentModelID == id },
+            sort: \.createdAt, order: .reverse
+        )
+    }
+
+    private var totalSpent: Double {
+        expenses.reduce(0) { $0 + $1.amount }
+    }
+
     private var budgetProgress: Double {
         guard trip.budget > 0 else { return 0 }
-        return min(trip.totalSpent / trip.budget, 1.0)
+        return min(totalSpent / trip.budget, 1.0)
     }
 
     private var expensesByCategory: [(category: String, expenses: [Expense], total: Double, limit: Double?)] {
-        let grouped = Dictionary(grouping: trip.expenses) { $0.categoryName }
+        let grouped = Dictionary(grouping: expenses) { $0.categoryName }
         return trip.categories.compactMap { category in
-            guard let expenses = grouped[category.name], !expenses.isEmpty else { return nil }
-            let total = expenses.reduce(0) { $0 + $1.amount }
-            return (category.name, expenses.sorted { $0.createdAt > $1.createdAt }, total, category.budgetLimit)
+            guard let catExpenses = grouped[category.name], !catExpenses.isEmpty else { return nil }
+            let total = catExpenses.reduce(0) { $0 + $1.amount }
+            return (category.name, catExpenses, total, category.budgetLimit)
         }.sorted { $0.total > $1.total }
     }
 
@@ -31,7 +47,7 @@ struct TripDetailInlineView: View {
                             Text("Total Spent")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            Text(CurrencyHelper.format(trip.totalSpent, code: trip.currency))
+                            Text(CurrencyHelper.format(totalSpent, code: trip.currency))
                                 .font(.title2.weight(.bold))
                         }
                         Spacer()
@@ -49,11 +65,11 @@ struct TripDetailInlineView: View {
                         .tint(budgetProgress > 0.9 ? .red : (budgetProgress > 0.7 ? .orange : Theme.accentTeal))
 
                     HStack {
-                        Text("\(Int(trip.budgetUsedPercent))% used")
+                        Text("\(Int(budgetProgress * 100))% used")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text("\(CurrencyHelper.format(max(0, trip.budget - trip.totalSpent), code: trip.currency)) remaining")
+                        Text("\(CurrencyHelper.format(max(0, trip.budget - totalSpent), code: trip.currency)) remaining")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

@@ -6,6 +6,7 @@ struct AddExpenseSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
+    @Environment(NotificationService.self) private var notificationService
 
     @State private var viewModel: ExpenseFormViewModel
 
@@ -46,7 +47,7 @@ struct AddExpenseSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        viewModel.saveNewExpense(trip: trip, modelContext: modelContext, firestoreService: firestoreService)
+                        viewModel.saveNewExpense(trip: trip, modelContext: modelContext, firestoreService: firestoreService, notificationService: notificationService)
                         dismiss()
                     }
                     .disabled(!viewModel.canSave)
@@ -110,4 +111,5 @@ struct AddExpenseSheet: View {
     AddExpenseSheet(trip: trip)
         .modelContainer(SampleData.container)
         .environment(FirestoreService())
+        .environment(NotificationService())
 }

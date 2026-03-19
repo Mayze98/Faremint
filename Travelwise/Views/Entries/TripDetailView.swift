@@ -6,6 +6,7 @@ struct TripDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
+    @Environment(NotificationService.self) private var notificationService
     @State private var showingAddExpense = false
     @State private var showingMoveToPast = false
     @State private var showingDeleteTrip = false
@@ -13,9 +14,35 @@ struct TripDetailView: View {
 
     @State private var viewModel: TripDetailViewModel
 
+    // Live query so the list updates immediately when expenses are added/deleted
+    @Query private var expenses: [Expense]
+
     init(trip: Trip) {
         self.trip = trip
         _viewModel = State(initialValue: TripDetailViewModel(trip: trip))
+        let id = trip.persistentModelID
+        _expenses = Query(
+            filter: #Predicate<Expense> { $0.trip?.persistentModelID == id },
+            sort: \.createdAt, order: .reverse
+        )
+    }
+
+    private var totalSpent: Double {
+        expenses.reduce(0) { $0 + $1.amount }
+    }
+
+    private var budgetProgress: Double {
+        guard trip.budget > 0 else { return 0 }
+        return min(totalSpent / trip.budget, 1.0)
+    }
+
+    private var expensesByCategory: [(category: String, expenses: [Expense], total: Double, limit: Double?)] {
+        let grouped = Dictionary(grouping: expenses) { $0.categoryName }
+        return trip.categories.compactMap { category in
+            guard let catExpenses = grouped[category.name], !catExpenses.isEmpty else { return nil }
+            let total = catExpenses.reduce(0) { $0 + $1.amount }
+            return (category.name, catExpenses, total, category.budgetLimit)
+        }.sorted { $0.total > $1.total }
     }
 
     var body: some View {
@@ -74,7 +101,7 @@ struct TripDetailView: View {
         .alert("Delete Trip?", isPresented: $showingDeleteTrip) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                viewModel.deleteTrip(modelContext: modelContext, firestoreService: firestoreService)
+                viewModel.deleteTrip(modelContext: modelContext, firestoreService: firestoreService, notificationService: notificationService)
                 dismiss()
             }
         } message: {
@@ -96,7 +123,7 @@ struct TripDetailView: View {
                         Text("Total Spent")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(CurrencyHelper.format(trip.totalSpent, code: trip.currency))
+                        Text(CurrencyHelper.format(totalSpent, code: trip.currency))
                             .font(.title2.weight(.bold))
                     }
                     Spacer()
@@ -110,15 +137,15 @@ struct TripDetailView: View {
                     }
                 }
 
-                ProgressView(value: viewModel.budgetProgress)
-                    .tint(viewModel.budgetProgress > 0.9 ? .red : (viewModel.budgetProgress > 0.7 ? .orange : Theme.accentTeal))
+                ProgressView(value: budgetProgress)
+                    .tint(budgetProgress > 0.9 ? .red : (budgetProgress > 0.7 ? .orange : Theme.accentTeal))
 
                 HStack {
-                    Text("\(Int(trip.budgetUsedPercent))% used")
+                    Text("\(Int(budgetProgress * 100))% used")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("\(CurrencyHelper.format(max(0, trip.budget - trip.totalSpent), code: trip.currency)) remaining")
+                    Text("\(CurrencyHelper.format(max(0, trip.budget - totalSpent), code: trip.currency)) remaining")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -129,7 +156,7 @@ struct TripDetailView: View {
 
     @ViewBuilder
     private var expensesSection: some View {
-        if viewModel.expensesByCategory.isEmpty {
+        if expensesByCategory.isEmpty {
             Section {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
@@ -143,7 +170,7 @@ struct TripDetailView: View {
                 .padding(.vertical, 20)
             }
         } else {
-            ForEach(viewModel.expensesByCategory, id: \.category) { group in
+            ForEach(expensesByCategory, id: \.category) { group in
                 Section {
                     ForEach(group.expenses) { expense in
                         NavigationLink {
@@ -154,7 +181,7 @@ struct TripDetailView: View {
                         .tint(.primary)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
-                                viewModel.deleteExpense(expense, modelContext: modelContext, firestoreService: firestoreService)
+                                viewModel.deleteExpense(expense, modelContext: modelContext, firestoreService: firestoreService, notificationService: notificationService)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -205,4 +232,5 @@ struct TripDetailView: View {
     }
     .modelContainer(SampleData.container)
     .environment(FirestoreService())
+    .environment(NotificationService())
 }

@@ -9,26 +9,15 @@ final class TripDetailViewModel {
         self.trip = trip
     }
 
-    var budgetProgress: Double {
-        guard trip.budget > 0 else { return 0 }
-        return min(trip.totalSpent / trip.budget, 1.0)
-    }
-
-    var expensesByCategory: [(category: String, expenses: [Expense], total: Double, limit: Double?)] {
-        let grouped = Dictionary(grouping: trip.expenses) { $0.categoryName }
-        return trip.categories.compactMap { category in
-            guard let expenses = grouped[category.name], !expenses.isEmpty else { return nil }
-            let total = expenses.reduce(0) { $0 + $1.amount }
-            return (category.name, expenses.sorted { $0.createdAt > $1.createdAt }, total, category.budgetLimit)
-        }.sorted { $0.total > $1.total }
-    }
-
-    func deleteExpense(_ expense: Expense, modelContext: ModelContext, firestoreService: FirestoreService) {
+    func deleteExpense(_ expense: Expense, modelContext: ModelContext, firestoreService: FirestoreService, notificationService: NotificationService) {
         firestoreService.deleteExpense(firestoreID: expense.firestoreID, tripFirestoreID: trip.firestoreID)
         modelContext.delete(expense)
+        // Re-evaluate thresholds so UserDefaults keys reset if spend dropped below a threshold
+        notificationService.checkBudgetThresholds(for: trip)
     }
 
-    func deleteTrip(modelContext: ModelContext, firestoreService: FirestoreService) {
+    func deleteTrip(modelContext: ModelContext, firestoreService: FirestoreService, notificationService: NotificationService) {
+        notificationService.clearNotificationState(for: trip)
         firestoreService.deleteTrip(firestoreID: trip.firestoreID)
         modelContext.delete(trip)
     }

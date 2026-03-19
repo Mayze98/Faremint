@@ -39,7 +39,7 @@ final class ExpenseFormViewModel {
         !title.trimmingCharacters(in: .whitespaces).isEmpty && amountValue > 0
     }
 
-    func saveNewExpense(trip: Trip, modelContext: ModelContext, firestoreService: FirestoreService) {
+    func saveNewExpense(trip: Trip, modelContext: ModelContext, firestoreService: FirestoreService, notificationService: NotificationService) {
         let expense = Expense(
             title: title.trimmingCharacters(in: .whitespaces),
             amount: amountValue,
@@ -53,9 +53,10 @@ final class ExpenseFormViewModel {
         modelContext.insert(expense)
         trip.expenses.append(expense)
         firestoreService.saveExpense(expense)
+        notificationService.checkBudgetThresholds(for: trip, pendingAmount: amountValue, pendingCategory: selectedCategory)
     }
 
-    func updateExpense(firestoreService: FirestoreService) {
+    func updateExpense(firestoreService: FirestoreService, notificationService: NotificationService) {
         guard let expense = existingExpense else { return }
         expense.title = title.trimmingCharacters(in: .whitespaces)
         expense.originalAmount = amountValue
@@ -66,5 +67,8 @@ final class ExpenseFormViewModel {
         expense.photoData = photoData
         expense.updatedAt = .now
         firestoreService.saveExpense(expense)
+        if let trip = expense.trip {
+            notificationService.checkBudgetThresholds(for: trip)
+        }
     }
 }

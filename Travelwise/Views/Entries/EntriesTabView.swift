@@ -14,7 +14,7 @@ struct EntriesTabView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("My Trips")
                             .font(.largeTitle.weight(.bold))
-                        Text("Track your travel expenses")
+                        Text("Your \(Calendar.current.component(.year, from: .now), format: .number.grouping(.never)) adventures")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }

@@ -36,7 +36,7 @@ struct SettingsTabView: View {
                         .tint(.primary)
                         Divider()
                         NavigationLink {
-                            Text("Notifications")
+                            NotificationsSettingsView()
                         } label: {
                             SettingsRowView(
                                 icon: "bell",

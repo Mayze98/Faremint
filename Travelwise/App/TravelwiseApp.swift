@@ -6,6 +6,7 @@ import FirebaseCore
 struct TravelwiseApp: App {
     @State private var authService: AuthService
     @State private var firestoreService = FirestoreService()
+    @State private var notificationService = NotificationService()
     let container: ModelContainer
 
     init() {
@@ -26,6 +27,10 @@ struct TravelwiseApp: App {
             ContentView()
                 .environment(authService)
                 .environment(firestoreService)
+                .environment(notificationService)
+                .onAppear {
+                    notificationService.requestAuthorization()
+                }
                 // Trigger initial sync right after authentication is confirmed.
                 .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
                     guard isAuthenticated else { return }

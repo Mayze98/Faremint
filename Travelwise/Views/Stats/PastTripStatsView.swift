@@ -3,6 +3,7 @@ import SwiftData
 
 struct PastTripStatsView: View {
     @Bindable var trip: Trip
+    @AppStorage("currencyCode") private var homeCurrency = "CAD"
 
     private var totalSpent: Double {
         trip.totalSpent
@@ -47,7 +48,7 @@ struct PastTripStatsView: View {
                 // Total expenses card
                 TotalExpensesCard(
                     totalExpenses: totalSpent,
-                    currencyCode: trip.currency,
+                    currencyCode: homeCurrency,
                     subtitle: trip.name
                 )
                 .padding(.horizontal)
@@ -57,7 +58,7 @@ struct PastTripStatsView: View {
                     .padding(.horizontal)
 
                 // Category breakdown
-                CategoryBreakdownList(categoryTotals: categoryTotals, currencyCode: trip.currency)
+                CategoryBreakdownList(categoryTotals: categoryTotals, currencyCode: homeCurrency)
                     .padding(.horizontal)
 
                 // Expenses grouped by category
@@ -81,7 +82,7 @@ struct PastTripStatsView: View {
                     Text("Total Spent")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(CurrencyHelper.format(totalSpent, code: trip.currency))
+                    Text(CurrencyHelper.format(totalSpent, code: homeCurrency))
                         .font(.title2.weight(.bold))
                 }
                 Spacer()
@@ -89,7 +90,7 @@ struct PastTripStatsView: View {
                     Text("Budget")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(CurrencyHelper.format(trip.budget, code: trip.currency))
+                    Text(CurrencyHelper.format(trip.budget, code: homeCurrency))
                         .font(.title2.weight(.bold))
                         .foregroundStyle(.secondary)
                 }
@@ -104,7 +105,7 @@ struct PastTripStatsView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 let remaining = max(0, trip.budget - totalSpent)
-                Text("\(CurrencyHelper.format(remaining, code: trip.currency)) remaining")
+                Text("\(CurrencyHelper.format(remaining, code: homeCurrency)) remaining")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -147,11 +148,11 @@ struct PastTripStatsView: View {
                         Spacer()
 
                         if let limit = group.limit {
-                            Text("\(CurrencyHelper.format(group.total, code: trip.currency)) / \(CurrencyHelper.format(limit, code: trip.currency))")
+                            Text("\(CurrencyHelper.format(group.total, code: homeCurrency)) / \(CurrencyHelper.format(limit, code: homeCurrency))")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(group.total > limit ? .red : .secondary)
                         } else {
-                            Text(CurrencyHelper.format(group.total, code: trip.currency))
+                            Text(CurrencyHelper.format(group.total, code: homeCurrency))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
@@ -171,7 +172,7 @@ struct PastTripStatsView: View {
                                     .foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            Text(CurrencyHelper.format(expense.amount, code: trip.currency))
+                            Text(CurrencyHelper.format(expense.amount, code: homeCurrency))
                                 .font(.subheadline.weight(.medium))
                                 .monospacedDigit()
                         }

@@ -3,6 +3,7 @@ import SwiftData
 
 struct EditTripSheet: View {
     let trip: Trip
+    @AppStorage("currencyCode") private var homeCurrency = "CAD"
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(FirestoreService.self) private var firestoreService
@@ -195,18 +196,18 @@ struct EditTripSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 if totalCategoryLimits > 0 {
                     HStack {
-                        Text("Allocated: \(CurrencyHelper.format(totalCategoryLimits, code: trip.currency))")
+                        Text("Allocated: \(CurrencyHelper.format(totalCategoryLimits, code: homeCurrency))")
                         Text("of")
-                        Text(CurrencyHelper.format(budgetValue, code: trip.currency))
+                        Text(CurrencyHelper.format(budgetValue, code: homeCurrency))
                     }
                     .font(.caption)
 
                     if remainingBudget > 0 {
-                        Text("\(CurrencyHelper.format(remainingBudget, code: trip.currency)) unallocated")
+                        Text("\(CurrencyHelper.format(remainingBudget, code: homeCurrency)) unallocated")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else if remainingBudget < 0 {
-                        Text("Over budget by \(CurrencyHelper.format(-remainingBudget, code: trip.currency))")
+                        Text("Over budget by \(CurrencyHelper.format(-remainingBudget, code: homeCurrency))")
                             .font(.caption)
                             .foregroundStyle(.red)
                     } else {

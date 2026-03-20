@@ -76,6 +76,7 @@ struct PastTripsTabView: View {
 
 private struct PastTripRow: View {
     let trip: Trip
+    @AppStorage("currencyCode") private var homeCurrency = "CAD"
 
     var body: some View {
         HStack(spacing: 12) {
@@ -107,9 +108,9 @@ private struct PastTripRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(CurrencyHelper.format(trip.totalSpent, code: trip.currency))
+                Text(CurrencyHelper.format(trip.totalSpent, code: homeCurrency))
                     .font(.subheadline.weight(.semibold))
-                Text("of \(CurrencyHelper.format(trip.budget, code: trip.currency))")
+                Text("of \(CurrencyHelper.format(trip.budget, code: homeCurrency))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

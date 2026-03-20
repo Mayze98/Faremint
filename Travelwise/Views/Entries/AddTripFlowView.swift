@@ -8,6 +8,7 @@ struct AddTripFlowView: View {
     @Binding var isPresented: Bool
 
     @State private var viewModel: AddTripFlowViewModel
+    @State private var showingCurrencyPicker = false
 
     init(isPresented: Binding<Bool>) {
         _isPresented = isPresented
@@ -218,8 +219,9 @@ struct AddTripFlowView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
+            // Budget input — always in home currency
             HStack(spacing: 2) {
-                Text(viewModel.currencySymbol)
+                Text(viewModel.homeCurrencySymbol)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
                 TextField("0", text: $viewModel.budget)
@@ -228,8 +230,57 @@ struct AddTripFlowView: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .frame(maxWidth: .infinity)
+
+            // Trip currency selector
+            VStack(spacing: 8) {
+                Text("Trip currency")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    showingCurrencyPicker = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(viewModel.tripCurrency)
+                            .font(.subheadline.weight(.semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Theme.accentTeal.opacity(0.12), in: Capsule())
+                    .foregroundStyle(Theme.accentTeal)
+                }
+                .sheet(isPresented: $showingCurrencyPicker) {
+                    TripCurrencyPickerSheet(selectedCurrency: $viewModel.tripCurrency)
+                }
+            }
+
+            // Equivalent in trip currency
+            if viewModel.tripCurrency != viewModel.homeCurrency {
+                Group {
+                    if viewModel.rateError {
+                        Text("Could not fetch exchange rate")
+                            .foregroundStyle(.red)
+                    } else if viewModel.isFetchingRate {
+                        HStack(spacing: 6) {
+                            ProgressView().scaleEffect(0.7)
+                            Text("Fetching rate…")
+                        }
+                        .foregroundStyle(.secondary)
+                    } else if !viewModel.budgetInTripCurrency.isEmpty {
+                        Text("≈ \(viewModel.budgetInTripCurrency) \(viewModel.tripCurrency)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.subheadline)
+                .animation(.easeInOut, value: viewModel.budgetInTripCurrency)
+            }
         }
         .padding(.horizontal)
+        .task(id: viewModel.tripCurrency) {
+            await viewModel.fetchExchangeRate()
+        }
     }
 
     private var stepReviewView: some View {
@@ -238,7 +289,7 @@ struct AddTripFlowView: View {
                 Text("Review your budget")
                     .font(.title2.weight(.bold))
 
-                Text("\(CurrencyHelper.format(viewModel.budgetValue, code: currencyCode)) for \(viewModel.name)")
+                Text("\(CurrencyHelper.format(viewModel.budgetValue, code: viewModel.homeCurrency)) for \(viewModel.name)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -330,16 +381,16 @@ struct AddTripFlowView: View {
                 .tint(viewModel.remainingBudget < 0 ? .red : (viewModel.remainingBudget == 0 ? Theme.accentTeal : .orange))
 
             HStack {
-                Text("Allocated: \(CurrencyHelper.format(viewModel.totalCategoryLimits, code: currencyCode))")
+                Text("Allocated: \(CurrencyHelper.format(viewModel.totalCategoryLimits, code: viewModel.homeCurrency))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if viewModel.remainingBudget > 0 {
-                    Text("\(CurrencyHelper.format(viewModel.remainingBudget, code: currencyCode)) left")
+                    Text("\(CurrencyHelper.format(viewModel.remainingBudget, code: viewModel.homeCurrency)) left")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if viewModel.remainingBudget < 0 {
-                    Text("Over by \(CurrencyHelper.format(-viewModel.remainingBudget, code: currencyCode))")
+                    Text("Over by \(CurrencyHelper.format(-viewModel.remainingBudget, code: viewModel.homeCurrency))")
                         .font(.caption)
                         .foregroundStyle(.red)
                 } else {
@@ -359,6 +410,60 @@ struct AddTripFlowView: View {
             if viewModel.handleNext() {
                 viewModel.saveTrip(modelContext: modelContext, firestoreService: firestoreService)
                 isPresented = false
+            }
+        }
+    }
+}
+
+// MARK: - Trip Currency Picker Sheet
+
+private struct TripCurrencyPickerSheet: View {
+    @Binding var selectedCurrency: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+
+    private var filtered: [(code: String, name: String)] {
+        if searchText.isEmpty { return CurrencyHelper.commonCurrencies }
+        return CurrencyHelper.commonCurrencies.filter {
+            $0.code.localizedCaseInsensitiveContains(searchText) ||
+            $0.name.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(filtered, id: \.code) { currency in
+                    Button {
+                        selectedCurrency = currency.code
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(currency.code)
+                                    .font(.subheadline.weight(.semibold))
+                                Text(currency.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selectedCurrency == currency.code {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Theme.accentTeal)
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                        }
+                    }
+                    .tint(.primary)
+                }
+            }
+            .searchable(text: $searchText, prompt: "Search currencies")
+            .navigationTitle("Trip Currency")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
             }
         }
     }

@@ -13,7 +13,23 @@ final class AddTripFlowViewModel {
     var endDate = Date.now.addingTimeInterval(7 * 24 * 3600)
     var selectedColorIndex = Int.random(in: 0..<8)
 
-    private let currencyCode: String
+    /// The currency chosen for this specific trip (editable on the budget step).
+    var tripCurrency: String
+    /// The user's home/preference currency (read from UserDefaults).
+    let homeCurrency: String
+    /// Exchange rate: 1 unit of tripCurrency = exchangeRate units of homeCurrency.
+    var exchangeRate: Double?
+    /// True if the Frankfurter fetch failed.
+    var rateError: Bool = false
+
+    /// Formatted equivalent of the home-currency budget converted into the trip currency.
+    var budgetInTripCurrency: String {
+        guard tripCurrency != homeCurrency, budgetValue > 0, let rate = exchangeRate else { return "" }
+        return CurrencyHelper.format(budgetValue * rate, code: tripCurrency)
+    }
+
+    /// True when a conversion is needed and the rate is still loading.
+    var isFetchingRate: Bool { tripCurrency != homeCurrency && exchangeRate == nil && !rateError }
 
     // Auto-allocation percentages for built-in categories
     private static let allocationPercents: [String: Double] = [
@@ -26,7 +42,25 @@ final class AddTripFlowViewModel {
     ]
 
     init(currencyCode: String) {
-        self.currencyCode = currencyCode
+        self.tripCurrency = currencyCode
+        self.homeCurrency = UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD"
+    }
+
+    // MARK: - Exchange Rate
+
+    func fetchExchangeRate() async {
+        guard tripCurrency != homeCurrency else {
+            exchangeRate = 1.0
+            return
+        }
+        rateError = false
+        exchangeRate = nil
+        do {
+            exchangeRate = try await ExchangeRateService.shared.rate(from: homeCurrency, to: tripCurrency)
+        } catch {
+            print("[ExchangeRate] Trip budget fetch failed: \(error)")
+            rateError = true
+        }
     }
 
     var budgetValue: Double {
@@ -41,10 +75,11 @@ final class AddTripFlowViewModel {
         budgetValue - totalCategoryLimits
     }
 
-    var currencySymbol: String {
+    /// Symbol for the home currency — shown next to the budget input field.
+    var homeCurrencySymbol: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencyCode = currencyCode
+        formatter.currencyCode = homeCurrency
         formatter.locale = .current
         return formatter.currencySymbol ?? "$"
     }
@@ -137,7 +172,7 @@ final class AddTripFlowViewModel {
         let trip = Trip(
             name: name.trimmingCharacters(in: .whitespaces),
             budget: budgetValue,
-            currency: currencyCode,
+            currency: tripCurrency,
             startDate: startDate,
             endDate: endDate,
             colorHex: Theme.bubblePalette[selectedColorIndex],

@@ -104,10 +104,7 @@ struct AddExpenseSheet: View {
             Text("Amount")
         } footer: {
             if viewModel.needsConversion && !viewModel.rateError {
-                let stored = viewModel.inputCurrency == viewModel.homeCurrency
-                    ? viewModel.homeCurrency
-                    : viewModel.homeCurrency
-                Text("Saved in \(stored)")
+                Text("Saved in \(viewModel.homeCurrency)")
                     .font(.caption2)
             }
         }

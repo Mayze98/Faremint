@@ -3,6 +3,7 @@ import SwiftUI
 struct BubbleView: View {
     let trip: Trip
     let radius: CGFloat
+    @AppStorage("currencyCode") private var homeCurrency = "CAD"
 
     private var fontSize: CGFloat {
         max(8, radius * 0.18)
@@ -29,7 +30,7 @@ struct BubbleView: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
 
-                    Text(CurrencyHelper.format(trip.totalSpent, code: trip.currency))
+                    Text(CurrencyHelper.format(trip.totalSpent, code: homeCurrency))
                         .font(.system(size: fontSize, weight: .medium, design: .rounded))
 
                     Text("\(Int(trip.budgetUsedPercent))% of budget")

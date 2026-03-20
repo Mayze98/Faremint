@@ -5,6 +5,7 @@ struct SettingsTabView: View {
     @Environment(AuthService.self) private var authService
     @Query private var trips: [Trip]
     @AppStorage("appearanceMode") private var appearanceMode = 0
+    @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var showingSignOutAlert = false
 
     var body: some View {
@@ -57,7 +58,7 @@ struct SettingsTabView: View {
                                 icon: "globe",
                                 iconColor: .blue,
                                 title: "Currency",
-                                subtitle: "\(UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD") - \(CurrencyHelper.commonCurrencies.first { $0.code == (UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD") }?.name ?? "Canadian Dollar")"
+                                subtitle: "\(currencyCode) - \(CurrencyHelper.commonCurrencies.first { $0.code == currencyCode }?.name ?? "Canadian Dollar")"
                             )
                         }
                         .tint(.primary)

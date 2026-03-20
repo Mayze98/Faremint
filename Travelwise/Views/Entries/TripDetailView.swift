@@ -6,6 +6,7 @@ struct TripDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
+    @AppStorage("currencyCode") private var homeCurrency = "CAD"
     @State private var showingAddExpense = false
     @State private var showingMoveToPast = false
     @State private var showingDeleteTrip = false
@@ -122,7 +123,7 @@ struct TripDetailView: View {
                         Text("Total Spent")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(CurrencyHelper.format(totalSpent, code: trip.currency))
+                        Text(CurrencyHelper.format(totalSpent, code: homeCurrency))
                             .font(.title2.weight(.bold))
                     }
                     Spacer()
@@ -130,7 +131,7 @@ struct TripDetailView: View {
                         Text("Budget")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(CurrencyHelper.format(trip.budget, code: trip.currency))
+                        Text(CurrencyHelper.format(trip.budget, code: homeCurrency))
                             .font(.title2.weight(.bold))
                             .foregroundStyle(.secondary)
                     }
@@ -144,7 +145,7 @@ struct TripDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("\(CurrencyHelper.format(max(0, trip.budget - totalSpent), code: trip.currency)) remaining")
+                    Text("\(CurrencyHelper.format(max(0, trip.budget - totalSpent), code: homeCurrency)) remaining")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -173,9 +174,9 @@ struct TripDetailView: View {
                 Section {
                     ForEach(group.expenses) { expense in
                         NavigationLink {
-                            ExpenseDetailView(expense: expense, currencyCode: trip.currency, categories: trip.categories)
+                            ExpenseDetailView(expense: expense, currencyCode: homeCurrency, categories: trip.categories)
                         } label: {
-                            ExpenseRowView(expense: expense, currencyCode: trip.currency)
+                            ExpenseRowView(expense: expense, currencyCode: homeCurrency)
                         }
                         .tint(.primary)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -209,11 +210,11 @@ struct TripDetailView: View {
             Spacer()
 
             if let limit = group.limit {
-                Text("\(CurrencyHelper.format(group.total, code: trip.currency)) / \(CurrencyHelper.format(limit, code: trip.currency))")
+                Text("\(CurrencyHelper.format(group.total, code: homeCurrency)) / \(CurrencyHelper.format(limit, code: homeCurrency))")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(group.total > limit ? .red : .secondary)
             } else {
-                Text(CurrencyHelper.format(group.total, code: trip.currency))
+                Text(CurrencyHelper.format(group.total, code: homeCurrency))
                     .font(.caption.weight(.semibold))
             }
         }

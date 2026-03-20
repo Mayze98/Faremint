@@ -6,19 +6,11 @@ import FirebaseCore
 struct TravelwiseApp: App {
     @State private var authService: AuthService
     @State private var firestoreService = FirestoreService()
-    @State private var notificationService = NotificationService()
     let container: ModelContainer
 
     init() {
         FirebaseApp.configure()
         _authService = State(initialValue: AuthService())
-        // Delete the existing SwiftData store so the new schema (firestoreID,
-        // updatedAt) loads cleanly. Data will be restored from Firestore on
-        // the first sync after login.
-        let storeURL = URL.applicationSupportDirectory
-            .appending(path: "default.store")
-        try? FileManager.default.removeItem(at: storeURL)
-
         container = try! ModelContainer(for: Trip.self, Expense.self)
     }
 
@@ -27,17 +19,19 @@ struct TravelwiseApp: App {
             ContentView()
                 .environment(authService)
                 .environment(firestoreService)
-                .environment(notificationService)
                 .onAppear {
-                    notificationService.requestAuthorization()
+                    NotificationService.shared.requestAuthorization()
                 }
-                // Trigger initial sync right after authentication is confirmed.
+                // Clear local data on sign-out; sync from Firestore on sign-in.
                 .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
-                    guard isAuthenticated else { return }
-                    Task {
-                        await firestoreService.syncFromFirestore(
-                            context: container.mainContext
-                        )
+                    if isAuthenticated {
+                        Task {
+                            await firestoreService.syncFromFirestore(
+                                context: container.mainContext
+                            )
+                        }
+                    } else {
+                        firestoreService.clearLocalData(context: container.mainContext)
                     }
                 }
                 // Re-sync whenever the app returns to the foreground.

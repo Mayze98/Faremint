@@ -14,6 +14,9 @@ enum AppStorageKeys {
 @Observable
 final class NotificationService: NSObject {
 
+    /// Shared singleton — use this from ViewModels so views don't need environment injection.
+    static let shared = NotificationService()
+
     override init() {
         super.init()
         // Register defaults so UserDefaults.bool(forKey:) returns the correct

@@ -8,7 +8,6 @@ struct ExpenseDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
-    @Environment(NotificationService.self) private var notificationService
     @State private var showingEditSheet = false
     @State private var showingDeleteConfirmation = false
 
@@ -159,7 +158,7 @@ struct ExpenseDetailView: View {
                     firestoreService.deleteExpense(firestoreID: expense.firestoreID, tripFirestoreID: tripFID)
                 }
                 modelContext.delete(expense)
-                if let trip { notificationService.checkBudgetThresholds(for: trip) }
+                if let trip { NotificationService.shared.checkBudgetThresholds(for: trip) }
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}
@@ -182,5 +181,4 @@ struct ExpenseDetailView: View {
         )
     }
     .environment(FirestoreService())
-    .environment(NotificationService())
 }

@@ -154,6 +154,22 @@ final class FirestoreService {
         deletePhoto(expenseID: firestoreID, userID: userID)
     }
 
+    // MARK: - Clear local data on sign-out
+
+    /// Deletes all Trip and Expense records from the local SwiftData store.
+    /// Call this when the current user signs out so a subsequent login starts clean.
+    @MainActor
+    func clearLocalData(context: ModelContext) {
+        do {
+            try context.delete(model: Expense.self)
+            try context.delete(model: Trip.self)
+            try context.save()
+            print("[Firestore] Local data cleared.")
+        } catch {
+            print("[Firestore] Failed to clear local data: \(error)")
+        }
+    }
+
     // MARK: - Background sync (Firestore → SwiftData merge)
 
     /// Fetches all trips (and their expenses) from Firestore and merges them

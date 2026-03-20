@@ -6,7 +6,6 @@ struct TripDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
-    @Environment(NotificationService.self) private var notificationService
     @State private var showingAddExpense = false
     @State private var showingMoveToPast = false
     @State private var showingDeleteTrip = false
@@ -101,7 +100,7 @@ struct TripDetailView: View {
         .alert("Delete Trip?", isPresented: $showingDeleteTrip) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                viewModel.deleteTrip(modelContext: modelContext, firestoreService: firestoreService, notificationService: notificationService)
+                viewModel.deleteTrip(modelContext: modelContext, firestoreService: firestoreService)
                 dismiss()
             }
         } message: {
@@ -181,7 +180,7 @@ struct TripDetailView: View {
                         .tint(.primary)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
-                                viewModel.deleteExpense(expense, modelContext: modelContext, firestoreService: firestoreService, notificationService: notificationService)
+                                viewModel.deleteExpense(expense, modelContext: modelContext, firestoreService: firestoreService)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -232,5 +231,4 @@ struct TripDetailView: View {
     }
     .modelContainer(SampleData.container)
     .environment(FirestoreService())
-    .environment(NotificationService())
 }

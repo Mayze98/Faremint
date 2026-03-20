@@ -19,8 +19,8 @@ final class PastTripsViewModel {
             .sorted { $0.year > $1.year }
     }
 
-    func deleteTrip(_ trip: Trip, modelContext: ModelContext, firestoreService: FirestoreService, notificationService: NotificationService) {
-        notificationService.clearNotificationState(for: trip)
+    func deleteTrip(_ trip: Trip, modelContext: ModelContext, firestoreService: FirestoreService) {
+        NotificationService.shared.clearNotificationState(for: trip)
         firestoreService.deleteTrip(firestoreID: trip.firestoreID)
         modelContext.delete(trip)
     }

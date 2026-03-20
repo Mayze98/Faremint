@@ -59,7 +59,7 @@ final class AuthService {
 
     func signOut() throws {
         try Auth.auth().signOut()
-        currentUser = nil
+        // currentUser is set to nil by the authStateDidChangeListener above.
     }
 
     func deleteAccount() async throws {

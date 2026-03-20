@@ -89,16 +89,31 @@ final class FirestoreService {
     }
 
     /// Call after deleting a Trip from SwiftData.
-    func deleteTrip(firestoreID: String) {
+    /// Hard-deletes the trip document, all its expense documents, and any
+    /// associated Storage photos so nothing can be re-synced back.
+    func deleteTrip(firestoreID: String, expenseIDs: [String] = []) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
-        // Mark as deleted rather than hard-delete so other devices can reconcile.
-        tripsCollection(for: userID)
-            .document(firestoreID)
-            .setData(["deletedAt": Timestamp(date: .now)], merge: true) { error in
-                if let error {
-                    print("[Firestore] Failed to delete trip \(firestoreID): \(error)")
+        let tripRef = tripsCollection(for: userID).document(firestoreID)
+        let expCollection = expensesCollection(tripID: firestoreID, userID: userID)
+
+        Task {
+            do {
+                // Delete every expense document in the subcollection.
+                let snapshot = try await expCollection.getDocuments()
+                for doc in snapshot.documents {
+                    // Clean up Storage photo if present.
+                    if let photoURL = doc.data()["photoURL"] as? String,
+                       !photoURL.isEmpty {
+                        deletePhoto(expenseID: doc.documentID, userID: userID)
+                    }
+                    try await doc.reference.delete()
                 }
+                // Hard-delete the trip document itself.
+                try await tripRef.delete()
+            } catch {
+                print("[Firestore] Failed to delete trip \(firestoreID): \(error)")
             }
+        }
     }
 
     /// Call after inserting or updating an Expense in SwiftData.
@@ -141,17 +156,19 @@ final class FirestoreService {
     }
 
     /// Call after deleting an Expense from SwiftData.
+    /// Hard-deletes the expense document and its Storage photo.
     func deleteExpense(firestoreID: String, tripFirestoreID: String) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
-        expensesCollection(tripID: tripFirestoreID, userID: userID)
-            .document(firestoreID)
-            .setData(["deletedAt": Timestamp(date: .now)], merge: true) { error in
-                if let error {
-                    print("[Firestore] Failed to delete expense \(firestoreID): \(error)")
-                }
+        Task {
+            do {
+                try await expensesCollection(tripID: tripFirestoreID, userID: userID)
+                    .document(firestoreID)
+                    .delete()
+                deletePhoto(expenseID: firestoreID, userID: userID)
+            } catch {
+                print("[Firestore] Failed to delete expense \(firestoreID): \(error)")
             }
-        // Clean up the photo from Storage too.
-        deletePhoto(expenseID: firestoreID, userID: userID)
+        }
     }
 
     // MARK: - Clear local data on sign-out
@@ -193,12 +210,6 @@ final class FirestoreService {
             for tripDoc in tripSnapshots.documents {
                 let data = tripDoc.data()
 
-                // Skip soft-deleted documents.
-                if data["deletedAt"] != nil {
-                    try deleteLocalTripIfPresent(firestoreID: tripDoc.documentID, context: context)
-                    continue
-                }
-
                 guard let remoteTrip = Trip.from(firestoreData: data, id: tripDoc.documentID) else {
                     continue
                 }
@@ -210,9 +221,7 @@ final class FirestoreService {
                 ).getDocuments()
 
                 let remoteExpenses: [Expense] = expenseSnapshots.documents.compactMap { doc in
-                    let eData = doc.data()
-                    guard eData["deletedAt"] == nil else { return nil }
-                    return Expense.from(firestoreData: eData, id: doc.documentID)
+                    Expense.from(firestoreData: doc.data(), id: doc.documentID)
                 }
 
                 // Merge trip (and its expenses) into SwiftData.
@@ -325,15 +334,6 @@ final class FirestoreService {
         }
     }
 
-    @MainActor
-    private func deleteLocalTripIfPresent(firestoreID: String, context: ModelContext) throws {
-        let descriptor = FetchDescriptor<Trip>(
-            predicate: #Predicate { $0.firestoreID == firestoreID }
-        )
-        if let local = try context.fetch(descriptor).first {
-            context.delete(local)
-        }
-    }
 }
 
 // MARK: - Trip Firestore serialization

@@ -5,6 +5,7 @@ struct EntriesTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = EntriesViewModel()
+    @State private var showingPastTrips = false
 
     var body: some View {
         NavigationStack {
@@ -20,15 +21,30 @@ struct EntriesTabView: View {
                     }
                     Spacer()
                     if !viewModel.trips(from: allTrips).isEmpty {
-                        Button {
-                            viewModel.toggleBubbleView()
-                        } label: {
-                            Image(systemName: viewModel.showingBubbles ? "list.bullet" : "circle.grid.3x3.fill")
-                                .font(.title3)
-                                .foregroundStyle(Theme.accentTeal)
-                                .frame(width: 40, height: 40)
-                                .background(Theme.accentTeal.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        VStack(alignment: .trailing, spacing: 10) {
+                            Button {
+                                viewModel.toggleBubbleView()
+                            } label: {
+                                Image(systemName: viewModel.showingBubbles ? "list.bullet" : "circle.grid.3x3.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(Theme.accentTeal)
+                                    .frame(width: 40, height: 40)
+                                    .background(Theme.accentTeal.opacity(0.12))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+
+                            Button {
+                                showingPastTrips = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                                        .font(.caption.weight(.semibold))
+                                    Text("Past Trips")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -51,10 +67,12 @@ struct EntriesTabView: View {
                     .frame(maxWidth: .infinity)
                     Spacer()
                 } else if viewModel.showingBubbles {
-                    BubbleClusterView(trips: viewModel.currentYearTrips(from: allTrips)) { trip in
-                        viewModel.selectFromBubble(trip)
+                    VStack(spacing: 16) {
+                        BubbleClusterView(trips: viewModel.currentYearTrips(from: allTrips)) { trip in
+                            viewModel.selectFromBubble(trip)
+                        }
+                        .padding()
                     }
-                    .padding()
                 } else if let current = viewModel.currentTrip(from: allTrips) {
                     // Trip selector chips + edit button
                     HStack(spacing: 0) {
@@ -136,6 +154,9 @@ struct EntriesTabView: View {
                 if let current = viewModel.currentTrip(from: allTrips) {
                     EditTripSheet(trip: current)
                 }
+            }
+            .sheet(isPresented: $showingPastTrips) {
+                PastTripsTabView()
             }
         }
     }

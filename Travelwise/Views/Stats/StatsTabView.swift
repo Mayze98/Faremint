@@ -49,7 +49,7 @@ struct StatsTabView: View {
                     // Total expenses card
                     TotalExpensesCard(
                         totalExpenses: viewModel.totalExpenses(from: allTrips),
-                        currencyCode: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode),
+                        currencyCode: currencyCode,
                         subtitle: viewModel.selectedTrip(from: allTrips) == nil ? "Across all trips" : viewModel.selectedTrip(from: allTrips)!.name
                     )
                     .padding(.horizontal)
@@ -59,7 +59,7 @@ struct StatsTabView: View {
                         .padding(.horizontal)
 
                     // Category breakdown
-                    CategoryBreakdownList(categoryTotals: viewModel.categoryTotals(from: allTrips), currencyCode: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode))
+                    CategoryBreakdownList(categoryTotals: viewModel.categoryTotals(from: allTrips), currencyCode: currencyCode)
                         .padding(.horizontal)
 
                     // Expenses grouped by category (when a trip is selected)
@@ -92,7 +92,7 @@ struct StatsTabView: View {
                         Text(group.category)
                             .font(.subheadline.weight(.semibold))
                         Spacer()
-                        Text(CurrencyHelper.format(group.total, code: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode)))
+                        Text(CurrencyHelper.format(group.total, code: currencyCode))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
@@ -111,7 +111,7 @@ struct StatsTabView: View {
                                     .foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            Text(CurrencyHelper.format(expense.amount, code: viewModel.displayCurrency(from: allTrips, defaultCode: currencyCode)))
+                            Text(CurrencyHelper.format(expense.amount, code: currencyCode))
                                 .font(.subheadline.weight(.medium))
                                 .monospacedDigit()
                         }

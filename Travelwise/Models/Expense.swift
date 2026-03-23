@@ -18,6 +18,11 @@ final class Expense {
     /// Download URL of the photo in Firebase Storage, if uploaded.
     var photoURL: String?
 
+    /// Optional location data attached to this expense.
+    var latitude: Double?
+    var longitude: Double?
+    var locationName: String?
+
     var trip: Trip?
     var createdAt: Date
     /// Timestamp of the last write so the sync merge can resolve conflicts.
@@ -33,6 +38,9 @@ final class Expense {
         note: String = "",
         photoData: Data? = nil,
         photoURL: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        locationName: String? = nil,
         trip: Trip? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
@@ -45,6 +53,9 @@ final class Expense {
         self.note = note
         self.photoData = photoData
         self.photoURL = photoURL
+        self.latitude = latitude
+        self.longitude = longitude
+        self.locationName = locationName
         self.trip = trip
         self.createdAt = createdAt
         self.updatedAt = updatedAt

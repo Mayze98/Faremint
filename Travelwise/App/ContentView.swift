@@ -23,8 +23,8 @@ struct ContentView: View {
                     Tab("Stats", systemImage: "chart.pie") {
                         StatsTabView()
                     }
-                    Tab("Past Trips", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90") {
-                        PastTripsTabView()
+                    Tab("Map", systemImage: "map") {
+                        MapTabView()
                     }
                     Tab("Settings", systemImage: "gearshape") {
                         SettingsTabView()

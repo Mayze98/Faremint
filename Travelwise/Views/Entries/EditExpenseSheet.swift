@@ -3,18 +3,20 @@ import SwiftData
 
 struct EditExpenseSheet: View {
     let expense: Expense
-    let categories: [ExpenseCategory]
     let currencyCode: String
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
 
     @State private var viewModel: ExpenseFormViewModel
+    @State private var categories: [ExpenseCategory]
+    @State private var showingNewCategorySheet = false
+    @State private var isEditingCategories = false
 
     init(expense: Expense, categories: [ExpenseCategory], currencyCode: String) {
         self.expense = expense
-        self.categories = categories
         self.currencyCode = currencyCode
         _viewModel = State(initialValue: ExpenseFormViewModel(expense: expense))
+        _categories = State(initialValue: categories)
     }
 
     var body: some View {
@@ -28,12 +30,19 @@ struct EditExpenseSheet: View {
 
                 Section("Category") {
                     categoryGrid
+                    addCategoryButton
                 }
 
                 Section("Notes") {
                     TextField("Add a note (optional)", text: $viewModel.note, axis: .vertical)
                         .lineLimit(3...6)
                 }
+
+                LocationPickerSection(
+                    locationName: $viewModel.locationName,
+                    latitude: $viewModel.latitude,
+                    longitude: $viewModel.longitude
+                )
 
                 PhotoPickerSection(imageData: $viewModel.photoData)
             }
@@ -122,29 +131,50 @@ struct EditExpenseSheet: View {
                     viewModel.selectedCategory = category.name
                 } label: {
                     VStack(spacing: 6) {
-                        Image(systemName: category.systemImage)
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                viewModel.selectedCategory == category.name
-                                    ? Theme.colorForCategory(category.name).opacity(0.2)
-                                    : Color(.systemGray6)
-                            )
-                            .foregroundStyle(
-                                viewModel.selectedCategory == category.name
-                                    ? Theme.colorForCategory(category.name)
-                                    : .secondary
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(
-                                        viewModel.selectedCategory == category.name
-                                            ? Theme.colorForCategory(category.name)
-                                            : .clear,
-                                        lineWidth: 2
-                                    )
-                            )
+                        ZStack(alignment: .topLeading) {
+                            Image(systemName: category.systemImage)
+                                .font(.title3)
+                                .frame(width: 44, height: 44)
+                                .background(
+                                    viewModel.selectedCategory == category.name
+                                        ? Theme.colorForCategory(category.name).opacity(0.2)
+                                        : Color(.systemGray6)
+                                )
+                                .foregroundStyle(
+                                    viewModel.selectedCategory == category.name
+                                        ? Theme.colorForCategory(category.name)
+                                        : .secondary
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(
+                                            viewModel.selectedCategory == category.name
+                                                ? Theme.colorForCategory(category.name)
+                                                : .clear,
+                                            lineWidth: 2
+                                        )
+                                )
+                                .rotationEffect(isEditingCategories ? .degrees(-2) : .degrees(0))
+                                .animation(
+                                    isEditingCategories
+                                        ? .easeInOut(duration: 0.14).repeatForever(autoreverses: true)
+                                        : .default,
+                                    value: isEditingCategories
+                                )
+
+                            if isEditingCategories && category.isCustom {
+                                Button {
+                                    removeCategory(category)
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
+                                        .background(Circle().fill(.background))
+                                }
+                                .offset(x: -6, y: -6)
+                            }
+                        }
 
                         Text(category.name)
                             .font(.caption2)
@@ -155,8 +185,60 @@ struct EditExpenseSheet: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .onLongPressGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isEditingCategories = true
+                    }
+                }
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var addCategoryButton: some View {
+        Button {
+            showingNewCategorySheet = true
+        } label: {
+            Label("Add Category", systemImage: "plus.circle.fill")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.accentTeal)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingNewCategorySheet) {
+            NewCategorySheet(existingCategories: categories) { category in
+                addCategory(category)
+            }
+        }
+    }
+
+    private func addCategory(_ category: ExpenseCategory) {
+        let exists = categories.contains {
+            $0.name.localizedCaseInsensitiveCompare(category.name) == .orderedSame
+        }
+        guard !exists else { return }
+        categories.append(category)
+        if let trip = expense.trip {
+            trip.categories.append(category)
+            trip.updatedAt = .now
+            firestoreService.saveTrip(trip)
+        }
+        viewModel.selectedCategory = category.name
+    }
+
+    private func removeCategory(_ category: ExpenseCategory) {
+        categories.removeAll { $0.id == category.id }
+        if let trip = expense.trip {
+            trip.categories.removeAll { $0.id == category.id }
+            trip.updatedAt = .now
+            firestoreService.saveTrip(trip)
+        }
+        if viewModel.selectedCategory == category.name {
+            viewModel.selectedCategory = categories.first?.name ?? BaseCategory.foodAndDrinks.rawValue
+        }
+        if categories.isEmpty {
+            isEditingCategories = false
+        }
     }
 }

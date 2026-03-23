@@ -6,8 +6,20 @@ struct SpendingPieChart: View {
 
     private static let defaultColors: [Color] = [.orange, .blue, .purple, .cyan, .pink, .green, .yellow, .brown]
 
-    private func colorFor(_ name: String, at index: Int) -> Color {
-        Theme.categoryColors[name] ?? Self.defaultColors[index % Self.defaultColors.count]
+    private func stableColorForCategory(_ name: String) -> Color {
+        if let known = Theme.categoryColors[name] {
+            return known
+        }
+        let index = stableHash(for: name) % Self.defaultColors.count
+        return Self.defaultColors[index]
+    }
+
+    private func stableHash(for name: String) -> Int {
+        var hash = 0
+        for scalar in name.unicodeScalars {
+            hash = (hash &* 31) &+ Int(scalar.value)
+        }
+        return abs(hash)
     }
 
     var body: some View {
@@ -33,8 +45,7 @@ struct SpendingPieChart: View {
                     .foregroundStyle(by: .value("Category", item.name))
                 }
                 .chartForegroundStyleScale(domain: categoryTotals.map(\.name)) { name in
-                    let index = categoryTotals.firstIndex { $0.name == name } ?? 0
-                    return colorFor(name, at: index)
+                    return stableColorForCategory(name)
                 }
                 .chartLegend(.hidden)
                 .frame(height: 220)
@@ -42,10 +53,10 @@ struct SpendingPieChart: View {
 
                 // Percentage labels
                 WrappingHStack(spacing: 8) {
-                    ForEach(Array(categoryTotals.enumerated()), id: \.element.id) { index, cat in
+                    ForEach(categoryTotals, id: \.id) { cat in
                         HStack(spacing: 4) {
                             Circle()
-                                .fill(colorFor(cat.name, at: index))
+                                .fill(stableColorForCategory(cat.name))
                                 .frame(width: 8, height: 8)
                             Text("\(cat.name) \(Int(cat.percentage))%")
                                 .font(.caption2)

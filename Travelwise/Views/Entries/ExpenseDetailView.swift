@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import MapKit
 
 struct ExpenseDetailView: View {
     let expense: Expense
@@ -84,6 +85,23 @@ struct ExpenseDetailView: View {
                 .padding(20)
                 .background(.background, in: RoundedRectangle(cornerRadius: 16))
 
+                // Photo
+                if let photoData = expense.photoData, let uiImage = UIImage(data: photoData) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Picture", systemImage: "camera.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .background(.background, in: RoundedRectangle(cornerRadius: 16))
+                }
+
                 // Notes
                 if !expense.note.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
@@ -99,17 +117,48 @@ struct ExpenseDetailView: View {
                     .background(.background, in: RoundedRectangle(cornerRadius: 16))
                 }
 
-                // Photo
-                if let photoData = expense.photoData, let uiImage = UIImage(data: photoData) {
+                // Location
+                if let lat = expense.latitude, let lon = expense.longitude {
                     VStack(alignment: .leading, spacing: 10) {
-                        Label("Receipt", systemImage: "camera.fill")
+                        Label("Location", systemImage: "mappin.circle.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
 
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(expense.locationName ?? String(format: "%.4f, %.4f", lat, lon))
+                                    .font(.subheadline)
+                                if expense.locationName != nil {
+                                    Text(String(format: "%.4f, %.4f", lat, lon))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Button {
+                                let placemark = MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+                                let item = MKMapItem(placemark: placemark)
+                                item.name = expense.locationName ?? expense.title
+                                item.openInMaps()
+                            } label: {
+                                Label("Open", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.accentTeal)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                        Map(initialPosition: .region(MKCoordinateRegion(
+                            center: coord,
+                            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                        ))) {
+                            Marker(expense.locationName ?? "", coordinate: coord)
+                                .tint(Theme.accentTeal)
+                        }
+                        .frame(height: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .allowsHitTesting(false)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(20)
@@ -155,7 +204,7 @@ struct ExpenseDetailView: View {
             Button("Delete", role: .destructive) {
                 let trip = expense.trip
                 if let tripFID = trip?.firestoreID {
-                    firestoreService.deleteExpense(firestoreID: expense.firestoreID, tripFirestoreID: tripFID)
+                    firestoreService.deleteExpense(firestoreID: expense.firestoreID, tripFirestoreID: tripFID, photoURL: expense.photoURL)
                 }
                 modelContext.delete(expense)
                 if let trip { NotificationService.shared.checkBudgetThresholds(for: trip) }
@@ -168,6 +217,9 @@ struct ExpenseDetailView: View {
     }
 
     private var categoryIcon: String {
+        if let tripCategory = expense.trip?.categories.first(where: { $0.name == expense.categoryName }) {
+            return tripCategory.systemImage
+        }
         let base = BaseCategory.allCases.first { $0.rawValue == expense.categoryName }
         return base?.systemImage ?? "tag.fill"
     }

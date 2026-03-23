@@ -23,7 +23,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		526E28B62F68ACD9000DE26C /* Travelwise.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = Travelwise.app; path = "/Users/john/Documents/iOS projects/Travelwise/build/Debug-iphoneos/Travelwise.app"; sourceTree = "<absolute>"; };
+		525284B02F71EE0A001D9367 /* Travelwise.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Travelwise.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		526E28C72F68AF24000DE26C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -63,6 +63,7 @@
 			children = (
 				526E28B82F68ACD9000DE26C /* Travelwise */,
 				526E28C72F68AF24000DE26C /* README.md */,
+				525284B02F71EE0A001D9367 /* Travelwise.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -100,7 +101,7 @@
 				52E64A222F6C04640005AFA8 /* FirebaseStorageCombine-Community */,
 			);
 			productName = Travelwise;
-			productReference = 526E28B62F68ACD9000DE26C /* Travelwise.app */;
+			productReference = 525284B02F71EE0A001D9367 /* Travelwise.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -293,6 +294,7 @@
 				DEVELOPMENT_TEAM = CX9P6A84SZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ravelwise uses your location to pin expenses on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -325,6 +327,7 @@
 				DEVELOPMENT_TEAM = CX9P6A84SZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ravelwise uses your location to pin expenses on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

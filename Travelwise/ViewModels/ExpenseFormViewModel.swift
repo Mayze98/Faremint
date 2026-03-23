@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 @Observable
 final class ExpenseFormViewModel {
@@ -8,6 +9,13 @@ final class ExpenseFormViewModel {
     var selectedCategory: String
     var note: String
     var photoData: Data?
+
+    // MARK: - Location
+    var locationName: String?
+    var latitude: Double?
+    var longitude: Double?
+
+    var hasLocation: Bool { latitude != nil && longitude != nil }
 
     // MARK: - Currency conversion
 
@@ -65,6 +73,9 @@ final class ExpenseFormViewModel {
         self.selectedCategory = expense.categoryName
         self.note = expense.note
         self.photoData = expense.photoData
+        self.locationName = expense.locationName
+        self.latitude = expense.latitude
+        self.longitude = expense.longitude
         self.homeCurrency = UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD"
         self.tripCurrency = expense.trip?.currency ?? (UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD")
         // When editing, the stored amount is already in home currency
@@ -122,6 +133,9 @@ final class ExpenseFormViewModel {
             categoryName: selectedCategory,
             note: note.trimmingCharacters(in: .whitespaces),
             photoData: photoData,
+            latitude: latitude,
+            longitude: longitude,
+            locationName: locationName,
             trip: trip
         )
         modelContext.insert(expense)
@@ -140,6 +154,9 @@ final class ExpenseFormViewModel {
         expense.categoryName = selectedCategory
         expense.note = note.trimmingCharacters(in: .whitespaces)
         expense.photoData = photoData
+        expense.latitude = latitude
+        expense.longitude = longitude
+        expense.locationName = locationName
         expense.updatedAt = .now
         firestoreService.saveExpense(expense)
         if let trip = expense.trip {

@@ -64,9 +64,17 @@ final class FirestoreService {
         return try await ref.data(maxSize: 10 * 1024 * 1024)
     }
 
-    /// Deletes the photo file from Storage.
-    private func deletePhoto(expenseID: String, userID: String) {
-        photoRef(expenseID: expenseID, userID: userID).delete { error in
+    /// Deletes a photo from Storage.
+    /// Uses the stored download URL when available (guaranteed correct path);
+    /// falls back to the reconstructed path-based reference otherwise.
+    private func deletePhoto(expenseID: String, userID: String, photoURL: String? = nil) {
+        let ref: StorageReference
+        if let photoURL {
+            ref = Storage.storage().reference(forURL: photoURL)
+        } else {
+            ref = photoRef(expenseID: expenseID, userID: userID)
+        }
+        ref.delete { error in
             if let error {
                 print("[Storage] Failed to delete photo for \(expenseID): \(error)")
             }
@@ -157,14 +165,14 @@ final class FirestoreService {
 
     /// Call after deleting an Expense from SwiftData.
     /// Hard-deletes the expense document and its Storage photo.
-    func deleteExpense(firestoreID: String, tripFirestoreID: String) {
+    func deleteExpense(firestoreID: String, tripFirestoreID: String, photoURL: String? = nil) {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         Task {
             do {
                 try await expensesCollection(tripID: tripFirestoreID, userID: userID)
                     .document(firestoreID)
                     .delete()
-                deletePhoto(expenseID: firestoreID, userID: userID)
+                deletePhoto(expenseID: firestoreID, userID: userID, photoURL: photoURL)
             } catch {
                 print("[Firestore] Failed to delete expense \(firestoreID): \(error)")
             }
@@ -307,6 +315,9 @@ final class FirestoreService {
                 existing.splitPercent = remoteExpense.splitPercent
                 existing.categoryName = remoteExpense.categoryName
                 existing.note = remoteExpense.note
+                existing.latitude = remoteExpense.latitude
+                existing.longitude = remoteExpense.longitude
+                existing.locationName = remoteExpense.locationName
                 existing.updatedAt = remoteExpense.updatedAt
                 // Sync photo URL; download image data if not already present locally.
                 if let remoteURL = remoteExpense.photoURL, existing.photoURL != remoteURL {
@@ -432,6 +443,9 @@ extension Expense {
         if let tripFID = trip?.firestoreID { data["tripFirestoreID"] = tripFID }
         // photoData binary is stored in Firebase Storage; only the URL goes in Firestore.
         if let url = photoURL { data["photoURL"] = url }
+        if let lat = latitude { data["latitude"] = lat }
+        if let lon = longitude { data["longitude"] = lon }
+        if let name = locationName { data["locationName"] = name }
         return data
     }
 
@@ -448,6 +462,9 @@ extension Expense {
         let note = data["note"] as? String ?? ""
         let splitPercent = data["splitPercent"] as? Double
         let photoURL = data["photoURL"] as? String
+        let latitude = data["latitude"] as? Double
+        let longitude = data["longitude"] as? Double
+        let locationName = data["locationName"] as? String
 
         return Expense(
             firestoreID: id,
@@ -458,6 +475,9 @@ extension Expense {
             categoryName: categoryName,
             note: note,
             photoURL: photoURL,
+            latitude: latitude,
+            longitude: longitude,
+            locationName: locationName,
             createdAt: createdTimestamp.dateValue(),
             updatedAt: updatedTimestamp.dateValue()
         )

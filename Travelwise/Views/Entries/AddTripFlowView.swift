@@ -44,7 +44,7 @@ struct AddTripFlowView: View {
 
                     // Step indicator
                     HStack(spacing: 6) {
-                        ForEach(0..<3) { i in
+                        ForEach(0..<5) { i in
                             Capsule()
                                 .fill(i <= viewModel.step ? Theme.accentTeal : Color(.systemGray4))
                                 .frame(width: i == viewModel.step ? 24 : 8, height: 8)
@@ -78,6 +78,18 @@ struct AddTripFlowView: View {
                                 removal: .opacity.combined(with: .move(edge: .leading))
                             ))
                     case 2:
+                        stepMustSpendView
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .trailing)),
+                                removal: .opacity.combined(with: .move(edge: .leading))
+                            ))
+                    case 3:
+                        stepPrioritiesView
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .trailing)),
+                                removal: .opacity.combined(with: .move(edge: .leading))
+                            ))
+                    case 4:
                         stepReviewView
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .move(edge: .trailing)),
@@ -95,7 +107,7 @@ struct AddTripFlowView: View {
                 Button {
                     handleNext()
                 } label: {
-                    Text(viewModel.step == 2 ? "Create Trip" : "Next")
+                    Text(viewModel.step == 4 ? "Create Trip" : "Next")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -157,45 +169,51 @@ struct AddTripFlowView: View {
             }
 
             // Date pickers
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Start")
+            VStack(spacing: 10) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Start")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(viewModel.startDate, format: .dateTime.month(.abbreviated).day().year())
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                            .overlay {
+                                DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
+                                    .labelsHidden()
+                                    .colorMultiply(.clear)
+                                    .allowsHitTesting(true)
+                            }
+                    }
+
+                    Image(systemName: "arrow.right")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(viewModel.startDate, format: .dateTime.month(.abbreviated).day().year())
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-                        .overlay {
-                            DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
-                                .labelsHidden()
-                                .colorMultiply(.clear)
-                                .allowsHitTesting(true)
-                        }
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 22)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("End")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(viewModel.endDate, format: .dateTime.month(.abbreviated).day().year())
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                            .overlay {
+                                DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
+                                    .labelsHidden()
+                                    .colorMultiply(.clear)
+                                    .allowsHitTesting(true)
+                            }
+                    }
                 }
 
-                Image(systemName: "arrow.right")
+                Text("\(tripLengthDays) \(tripLengthDays == 1 ? "day" : "days")")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 22)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("End")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(viewModel.endDate, format: .dateTime.month(.abbreviated).day().year())
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-                        .overlay {
-                            DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
-                                .labelsHidden()
-                                .colorMultiply(.clear)
-                                .allowsHitTesting(true)
-                        }
-                }
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 32)
             .onChange(of: viewModel.startDate) { _, _ in
@@ -203,6 +221,14 @@ struct AddTripFlowView: View {
             }
         }
         .padding(.horizontal)
+    }
+
+    private var tripLengthDays: Int {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: viewModel.startDate)
+        let end = calendar.startOfDay(for: viewModel.endDate)
+        let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        return max(days + 1, 1)
     }
 
     private var stepBudgetView: some View {
@@ -283,6 +309,179 @@ struct AddTripFlowView: View {
         }
     }
 
+    private var stepMustSpendView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "bookmark.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Theme.accentTeal)
+
+            VStack(spacing: 4) {
+                Text("Must-spend items")
+                    .font(.title.weight(.bold))
+                    .multilineTextAlignment(.center)
+
+                Text("Add fixed costs like flights or hotels before setting priorities.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if !viewModel.mustSpendItems.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(viewModel.mustSpendItems) { item in
+                        HStack(spacing: 12) {
+                            Image(systemName: item.category.systemImage)
+                                .foregroundStyle(Theme.accentTeal)
+                                .frame(width: 28)
+                            Text(item.category.rawValue)
+                                .font(.subheadline)
+                            Spacer()
+                            TextField("0", text: viewModel.mustSpendAmountBinding(for: item))
+                                .keyboardType(.decimalPad)
+                                .font(.subheadline.weight(.semibold))
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                            Button {
+                                viewModel.removeMustSpendItem(item)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundStyle(.red)
+                                    .font(.caption)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+
+                        if item.id != viewModel.mustSpendItems.last?.id {
+                            Divider().padding(.leading, 44)
+                        }
+                    }
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 8)
+            }
+
+            HStack(spacing: 10) {
+                Picker("Category", selection: $viewModel.mustSpendCategory) {
+                    ForEach(BaseCategory.allCases) { category in
+                        Text(category.rawValue).tag(category)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                TextField("Amount", text: $viewModel.mustSpendAmount)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+
+                Button {
+                    viewModel.addMustSpendItem()
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(Theme.accentTeal)
+                        .font(.title3)
+                }
+                .disabled(Double(viewModel.mustSpendAmount) == nil || Double(viewModel.mustSpendAmount) == 0)
+            }
+            .padding(.horizontal, 24)
+
+            if viewModel.mustSpendTotal > 0 {
+                Text("Total reserved: \(CurrencyHelper.format(viewModel.mustSpendTotal, code: viewModel.homeCurrency))")
+                    .font(.caption)
+                    .foregroundColor(viewModel.isMustSpendWithinBudget ? .secondary : .red)
+            }
+
+            if !viewModel.isMustSpendWithinBudget {
+                Text("Must-spend items can’t exceed your total budget.")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private var stepPrioritiesView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Theme.accentTeal)
+
+            VStack(spacing: 4) {
+                Text("Any spending priorities?")
+                    .font(.title.weight(.bold))
+                    .multilineTextAlignment(.center)
+
+                Text(viewModel.priorityCategories.isEmpty
+                     ? "Optional — select up to 3 categories"
+                     : "\(viewModel.priorityCategories.count) of 3 selected")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .animation(.easeInOut, value: viewModel.priorityCategories.count)
+            }
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 130, maximum: 180), spacing: 10)],
+                spacing: 10
+            ) {
+                ForEach(BaseCategory.allCases) { category in
+                    let name = category.rawValue
+                    let isSelected = viewModel.priorityCategories.contains(name)
+                    let isExcluded = viewModel.mustSpendExclusionCategories.contains(name)
+                    let isDisabled = isExcluded || (!isSelected && viewModel.priorityCategories.count >= 3)
+
+                    Button {
+                        if isSelected {
+                            viewModel.priorityCategories.remove(name)
+                        } else {
+                            viewModel.priorityCategories.insert(name)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: category.systemImage)
+                                .font(.caption.weight(.semibold))
+                            Text(name)
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            isSelected
+                                ? Theme.accentTeal.opacity(0.15)
+                                : Color(.secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 20)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .strokeBorder(
+                                    isSelected ? Theme.accentTeal : Color(.systemGray4),
+                                    lineWidth: isSelected ? 1.5 : 0.5
+                                )
+                        )
+                        .foregroundStyle(
+                            isDisabled
+                                ? Color(.systemGray3)
+                                : (isSelected ? Theme.accentTeal : .primary)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDisabled)
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
+                }
+            }
+            .padding(.horizontal, 24)
+
+            Text("Priority categories receive a larger slice of your budget.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .padding(.horizontal)
+    }
+
     private var stepReviewView: some View {
         VStack(spacing: 16) {
             VStack(spacing: 4) {
@@ -292,6 +491,26 @@ struct AddTripFlowView: View {
                 Text("\(CurrencyHelper.format(viewModel.budgetValue, code: viewModel.homeCurrency)) for \(viewModel.name)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+            }
+
+            if !viewModel.mustSpendItems.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Must-spend items")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(viewModel.mustSpendItems) { item in
+                        HStack {
+                            Text(item.category.rawValue)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(CurrencyHelper.format(Double(item.amount) ?? 0, code: viewModel.homeCurrency))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 8)
             }
 
             // Allocation summary

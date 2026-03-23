@@ -14,8 +14,10 @@ enum Theme {
         "Food & Drinks": .orange,
         "Transportation": .blue,
         "Sightseeing": .purple,
+        "Activities": .mint,
         "Flight": .cyan,
         "Hotels": .pink,
+        "Shopping": .indigo,
         "Souvenir": .green
     ]
 

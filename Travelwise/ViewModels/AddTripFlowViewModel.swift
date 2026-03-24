@@ -13,7 +13,6 @@ final class AddTripFlowViewModel {
     var name = ""
     var budget = ""
     var categoryLimits: [String: String] = [:]
-    var customCategoryName = ""
     var customCategories: [ExpenseCategory] = []
     var startDate = Date.now
     var endDate = Date.now.addingTimeInterval(7 * 24 * 3600)
@@ -225,13 +224,6 @@ final class AddTripFlowViewModel {
         return value
     }
 
-    func addCustomCategory() {
-        let trimmed = customCategoryName.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        customCategories.append(ExpenseCategory(customName: trimmed))
-        customCategoryName = ""
-    }
-
     func addMustSpendItem() {
         let trimmed = mustSpendAmount.trimmingCharacters(in: .whitespaces)
         guard let value = Double(trimmed), value > 0 else { return }
@@ -261,6 +253,10 @@ final class AddTripFlowViewModel {
     func removeCustomCategory(_ category: ExpenseCategory) {
         categoryLimits.removeValue(forKey: category.name)
         customCategories.removeAll { $0.id == category.id }
+    }
+
+    func clearAllLimits() {
+        categoryLimits.removeAll()
     }
 
     func ensureEndDateAfterStart() {

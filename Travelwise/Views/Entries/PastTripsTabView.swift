@@ -4,22 +4,13 @@ import SwiftData
 struct PastTripsTabView: View {
     @Query(sort: \Trip.endDate, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
     @State private var viewModel = PastTripsViewModel()
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Past Trips")
-                        .font(.largeTitle.weight(.bold))
-                    Text("Your completed adventures")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal)
-                .padding(.top)
-
                 if viewModel.pastTrips(from: allTrips).isEmpty {
                     Spacer()
                     emptyState
@@ -54,6 +45,13 @@ struct PastTripsTabView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
+            .navigationTitle("Past Trips")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 

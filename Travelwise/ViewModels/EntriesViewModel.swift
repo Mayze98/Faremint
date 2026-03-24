@@ -6,7 +6,6 @@ final class EntriesViewModel {
     var showingAddTrip = false
     var showingAddExpense = false
     var showingEditTrip = false
-    var showingBubbles = false
     var displayedTrip: Trip?
 
     func trips(from allTrips: [Trip]) -> [Trip] {
@@ -36,22 +35,9 @@ final class EntriesViewModel {
         }
     }
 
-    func toggleBubbleView() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showingBubbles.toggle()
-        }
-    }
-
-    func selectFromBubble(_ trip: Trip) {
-        displayedTrip = trip
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showingBubbles = false
-        }
-    }
-
     func handleFABTap(allTrips: [Trip]) {
         let activeTrips = trips(from: allTrips)
-        if showingBubbles || activeTrips.isEmpty {
+        if activeTrips.isEmpty {
             withAnimation(.easeInOut(duration: 0.35)) {
                 showingAddTrip = true
             }

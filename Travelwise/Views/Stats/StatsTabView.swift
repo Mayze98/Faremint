@@ -5,18 +5,36 @@ struct StatsTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var viewModel = StatsViewModel()
+    @State private var showingPastTrips = false
+
+    private var currentYear: Int {
+        Calendar.current.component(.year, from: .now)
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 20) {
                     // Header
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Statistics")
-                            .font(.largeTitle.weight(.bold))
-                        Text("Your spending overview")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Statistics")
+                                .font(.largeTitle.weight(.bold))
+                            Text("Your \(currentYear, format: .number.grouping(.never)) spending overview")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button {
+                            showingPastTrips = true
+                        } label: {
+                            Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                                .font(.title3)
+                                .foregroundStyle(Theme.accentTeal)
+                                .frame(width: 40, height: 40)
+                                .background(Theme.accentTeal.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
                     }
                     .padding(.horizontal)
 
@@ -72,6 +90,9 @@ struct StatsTabView: View {
                 .padding(.bottom, 20)
             }
             .background(Color(.systemGroupedBackground))
+            .sheet(isPresented: $showingPastTrips) {
+                StatsPastTripsSheet()
+            }
         }
     }
 

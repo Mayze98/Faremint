@@ -20,31 +20,28 @@ struct EntriesTabView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if !viewModel.trips(from: allTrips).isEmpty {
-                        VStack(alignment: .trailing, spacing: 10) {
-                            Button {
-                                viewModel.toggleBubbleView()
-                            } label: {
-                                Image(systemName: viewModel.showingBubbles ? "list.bullet" : "circle.grid.3x3.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Theme.accentTeal)
-                                    .frame(width: 40, height: 40)
-                                    .background(Theme.accentTeal.opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    HStack(spacing: 8) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                viewModel.showingAddTrip = true
                             }
-
-                            Button {
-                                showingPastTrips = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
-                                        .font(.caption.weight(.semibold))
-                                    Text("Past Trips")
-                                        .font(.caption.weight(.semibold))
-                                }
-                                .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                        } label: {
+                            Image(systemName: "airplane.departure")
+                                .font(.title3)
+                                .foregroundStyle(Theme.accentTeal)
+                                .frame(width: 40, height: 40)
+                                .background(Theme.accentTeal.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        Button {
+                            showingPastTrips = true
+                        } label: {
+                            Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                                .font(.title3)
+                                .foregroundStyle(Theme.accentTeal)
+                                .frame(width: 40, height: 40)
+                                .background(Theme.accentTeal.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }
@@ -66,13 +63,6 @@ struct EntriesTabView: View {
                     }
                     .frame(maxWidth: .infinity)
                     Spacer()
-                } else if viewModel.showingBubbles {
-                    VStack(spacing: 16) {
-                        BubbleClusterView(trips: viewModel.currentYearTrips(from: allTrips)) { trip in
-                            viewModel.selectFromBubble(trip)
-                        }
-                        .padding()
-                    }
                 } else if let current = viewModel.currentTrip(from: allTrips) {
                     // Trip selector chips + edit button
                     HStack(spacing: 0) {

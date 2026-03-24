@@ -9,6 +9,7 @@ struct AddTripFlowView: View {
 
     @State private var viewModel: AddTripFlowViewModel
     @State private var showingCurrencyPicker = false
+    @State private var showingNewCategorySheet = false
 
     init(isPresented: Binding<Bool>) {
         _isPresented = isPresented
@@ -117,6 +118,12 @@ struct AddTripFlowView: View {
                 .disabled(!viewModel.nextButtonEnabled)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
+            }
+        }
+        .sheet(isPresented: $showingNewCategorySheet) {
+            let allCategories = BaseCategory.allCases.map { ExpenseCategory(base: $0) } + viewModel.customCategories
+            NewCategorySheet(existingCategories: allCategories) { newCategory in
+                viewModel.customCategories.append(newCategory)
             }
         }
     }
@@ -517,6 +524,19 @@ struct AddTripFlowView: View {
             allocationSummary
                 .padding(.horizontal, 4)
 
+            HStack {
+                Text("Category Limits")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Clear All") {
+                    viewModel.clearAllLimits()
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.red)
+            }
+            .padding(.horizontal, 4)
+
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(BaseCategory.allCases) { category in
@@ -551,22 +571,24 @@ struct AddTripFlowView: View {
                     }
 
                     // Add custom category
-                    HStack(spacing: 12) {
-                        Image(systemName: "tag.fill")
-                            .foregroundStyle(.gray)
-                            .frame(width: 28)
-                        TextField("Add custom category", text: $viewModel.customCategoryName)
-                            .font(.subheadline)
-                        Button {
-                            viewModel.addCustomCategory()
-                        } label: {
+                    Button {
+                        showingNewCategorySheet = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "tag.fill")
+                                .foregroundStyle(Theme.accentTeal)
+                                .frame(width: 28)
+                            Text("Add custom category")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.accentTeal)
+                            Spacer()
                             Image(systemName: "plus.circle.fill")
                                 .foregroundStyle(Theme.accentTeal)
                         }
-                        .disabled(viewModel.customCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
+                    .buttonStyle(.plain)
                 }
             }
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))

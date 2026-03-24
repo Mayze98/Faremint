@@ -15,8 +15,8 @@ struct EditTripSheet: View {
     @State private var hasEndDate: Bool
     @State private var endDate: Date
     @State private var selectedColorIndex: Int
-    @State private var customCategoryName = ""
     @State private var customCategories: [ExpenseCategory]
+    @State private var showingNewCategorySheet = false
     @State private var categoryLimits: [String: String]
 
     init(trip: Trip) {
@@ -177,18 +177,20 @@ struct EditTripSheet: View {
                     }
                 }
             }
-            HStack {
-                TextField("Add custom category", text: $customCategoryName)
-                Button {
-                    let trimmed = customCategoryName.trimmingCharacters(in: .whitespaces)
-                    guard !trimmed.isEmpty else { return }
-                    customCategories.append(ExpenseCategory(customName: trimmed))
-                    customCategoryName = ""
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.accentTeal)
+            Button {
+                showingNewCategorySheet = true
+            } label: {
+                Label("Add Category", systemImage: "plus.circle.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.accentTeal)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showingNewCategorySheet) {
+                let existing = BaseCategory.allCases.map { ExpenseCategory(base: $0) } + customCategories
+                NewCategorySheet(existingCategories: existing) { category in
+                    customCategories.append(category)
                 }
-                .disabled(customCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         } header: {
             Text("Categories")

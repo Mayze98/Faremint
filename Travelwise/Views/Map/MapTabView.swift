@@ -11,18 +11,39 @@ import MapKit
 
 struct MapTabView: View {
     @Query private var trips: [Trip]
-    @State private var selectedTripID: String? = nil   // nil = show all
+    @State private var selectedTripID: String? = nil   // nil = show all trips in selected year
     @State private var selectedExpense: Expense? = nil
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var selectedYear: Int = Calendar.current.component(.year, from: .now)
+    @State private var showingYearPicker = false
 
-    // Expenses that have a valid location
-    private var mappableExpenses: [Expense] {
-        let allExpenses = trips.flatMap { $0.expenses }
-        let located = allExpenses.filter { $0.latitude != nil && $0.longitude != nil }
-        if let tripID = selectedTripID {
-            return located.filter { $0.trip?.firestoreID == tripID }
+    private var currentYear: Int { Calendar.current.component(.year, from: .now) }
+
+    /// All years that have at least one located expense, sorted descending.
+    private var availableYears: [Int] {
+        let years = trips.flatMap { $0.expenses }
+            .filter { $0.latitude != nil }
+            .map { Calendar.current.component(.year, from: $0.createdAt) }
+        return Array(Set(years)).sorted(by: >)
+    }
+
+    /// Trips in the selected year that have at least one located expense.
+    private var tripsInSelectedYear: [Trip] {
+        trips.filter { trip in
+            Calendar.current.component(.year, from: trip.startDate) == selectedYear &&
+            trip.expenses.contains { $0.latitude != nil && $0.longitude != nil }
         }
-        return located
+    }
+
+    /// Expenses to show on the map.
+    private var mappableExpenses: [Expense] {
+        let yearExpenses = tripsInSelectedYear
+            .flatMap { $0.expenses }
+            .filter { $0.latitude != nil && $0.longitude != nil }
+        if let tripID = selectedTripID {
+            return yearExpenses.filter { $0.trip?.firestoreID == tripID }
+        }
+        return yearExpenses
     }
 
     var body: some View {
@@ -30,18 +51,54 @@ struct MapTabView: View {
             ZStack(alignment: .top) {
                 map
 
-                // Trip filter bar
-                if trips.contains(where: { $0.expenses.contains { $0.latitude != nil } }) {
-                    tripFilterBar
-                        .padding(.top, 8)
+                VStack(spacing: 0) {
+                    // Header
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Map")
+                                .font(.largeTitle.weight(.bold))
+                            Text(selectedYear == currentYear
+                                 ? "Your \(currentYear, format: .number.grouping(.never)) adventures"
+                                 : "Your \(selectedYear, format: .number.grouping(.never)) adventures")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button {
+                            showingYearPicker = true
+                        } label: {
+                            Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                                .font(.title3)
+                                .foregroundStyle(Theme.accentTeal)
+                                .frame(width: 40, height: 40)
+                                .background(Theme.accentTeal.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top)
+                    .padding(.bottom, 8)
+                    .background(.ultraThinMaterial)
+
+                    // Trip filter bar
+                    if !tripsInSelectedYear.isEmpty {
+                        tripFilterBar
+                            .padding(.top, 8)
+                    }
                 }
             }
-            .navigationTitle("Map")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
             .sheet(item: $selectedExpense) { expense in
                 ExpenseMapCallout(expense: expense)
                     .presentationDetents([.height(280)])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showingYearPicker) {
+                yearPickerSheet
+            }
+            .onChange(of: selectedYear) { _, _ in
+                selectedTripID = nil
+                fitMapToExpenses()
             }
         }
     }
@@ -85,12 +142,8 @@ struct MapTabView: View {
     private var tripFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                // "All" pill
                 filterPill(title: "All trips", tripID: nil, colorHex: "4ECDC4")
-
-                ForEach(trips.filter { trip in
-                    trip.expenses.contains { $0.latitude != nil && $0.longitude != nil }
-                }) { trip in
+                ForEach(tripsInSelectedYear) { trip in
                     filterPill(title: trip.name, tripID: trip.firestoreID, colorHex: trip.colorHex)
                 }
             }
@@ -124,6 +177,41 @@ struct MapTabView: View {
         .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 
+    // MARK: - Year picker sheet
+
+    private var yearPickerSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(availableYears.isEmpty ? [currentYear] : availableYears, id: \.self) { year in
+                    Button {
+                        selectedYear = year
+                        showingYearPicker = false
+                    } label: {
+                        HStack {
+                            Text(year == currentYear ? "\(year, format: .number.grouping(.never)) (current)" : "\(year, format: .number.grouping(.never))")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if year == selectedYear {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Theme.accentTeal)
+                                    .fontWeight(.semibold)
+                            }
+        
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Filter by Year")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showingYearPicker = false }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
     // MARK: - Empty state
 
     private var emptyState: some View {
@@ -133,7 +221,7 @@ struct MapTabView: View {
                 .foregroundStyle(.secondary)
             Text("No pinned expenses")
                 .font(.headline)
-            Text("Add a location when creating or editing an expense to see it here.")
+            Text("No located expenses for \(selectedYear, format: .number.grouping(.never)). Add a location when creating or editing an expense to see it here.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

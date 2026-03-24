@@ -109,6 +109,7 @@ struct TripDetailInlineView: View {
                 }
             }
         }
+        .contentMargins(.top, 0, for: .scrollContent)
     }
 
     private func categoryHeader(for group: (category: String, expenses: [Expense], total: Double, limit: Double?)) -> some View {

@@ -45,6 +45,7 @@ Travelwise is a simple and intuitive budgeting app designed to help travelers ma
 - iOS
 - Swift Data (ModelContainer) for local persistence
 - Firebase (FirebaseApp) for backend services and authentication
+- Frankfurter API for daily currency exchange rates
 
 ## License
 

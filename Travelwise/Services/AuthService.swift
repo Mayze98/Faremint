@@ -59,7 +59,8 @@ final class AuthService {
 
     func signOut() throws {
         try Auth.auth().signOut()
-        // currentUser is set to nil by the authStateDidChangeListener above.
+        // Set immediately so onChange fires synchronously before any new login.
+        currentUser = nil
     }
 
     func deleteAccount() async throws {

@@ -23,6 +23,13 @@ final class FirestoreService {
     /// Non-nil if the last sync attempt produced an error.
     var syncError: Error?
 
+    /// UID of the user whose data is currently loaded in SwiftData.
+    /// Used to detect account switches, including on app launch.
+    private(set) var loadedUID: String?
+
+    /// Serial task so only one sync runs at a time.
+    private var syncTask: Task<Void, Never>?
+
     // MARK: Private
 
     // Not stored as a property so Firestore.firestore() is never called at
@@ -186,10 +193,18 @@ final class FirestoreService {
     @MainActor
     func clearLocalData(context: ModelContext) {
         do {
-            try context.delete(model: Expense.self)
-            try context.delete(model: Trip.self)
+            // Fetch and delete individually so SwiftUI @Query observers and
+            // the in-memory object graph are both updated correctly.
+            // Expenses first to avoid cascade conflicts with the Trip relationship.
+            let expenses = try context.fetch(FetchDescriptor<Expense>())
+            for expense in expenses { context.delete(expense) }
+
+            let trips = try context.fetch(FetchDescriptor<Trip>())
+            for trip in trips { context.delete(trip) }
+
             try context.save()
-            print("[Firestore] Local data cleared.")
+            loadedUID = nil
+            print("[Firestore] Local data cleared — \(trips.count) trips, \(expenses.count) expenses removed.")
         } catch {
             print("[Firestore] Failed to clear local data: \(error)")
         }
@@ -197,32 +212,47 @@ final class FirestoreService {
 
     // MARK: - Background sync (Firestore → SwiftData merge)
 
-    /// Fetches all trips (and their expenses) from Firestore and merges them
-    /// into the provided SwiftData context.  Uses `updatedAt` to resolve
-    /// conflicts: the newer record wins.
-    ///
-    /// Call this after sign-in, on app foreground, or on a timer.
+    /// Cancels any in-flight sync then enqueues a new one.
+    /// Pass `clearFirst: true` (login path) to wipe local data inside the
+    /// same serial task — no gap between the clear and the Firestore fetch.
     @MainActor
-    func syncFromFirestore(context: ModelContext) async {
+    func syncFromFirestore(context: ModelContext, clearFirst: Bool = false, force: Bool = false) async {
+        syncTask?.cancel()
+        syncTask = Task { @MainActor in
+            await performSync(context: context, clearFirst: clearFirst)
+        }
+        await syncTask?.value
+    }
+
+    @MainActor
+    private func performSync(context: ModelContext, clearFirst: Bool) async {
         guard let userID = Auth.auth().currentUser?.uid else { return }
-        guard !isSyncing else { return }
+
+        // Wipe existing data before fetching, in the same async frame.
+        if clearFirst {
+            clearLocalData(context: context)
+        }
 
         isSyncing = true
         syncError = nil
         defer { isSyncing = false }
 
         do {
-            // Fetch all non-deleted trips from Firestore.
             let tripSnapshots = try await tripsCollection(for: userID).getDocuments()
 
-            for tripDoc in tripSnapshots.documents {
-                let data = tripDoc.data()
+            // If the user changed while we were awaiting the network, abort.
+            guard Auth.auth().currentUser?.uid == userID else {
+                print("[Firestore] User changed mid-sync — aborting.")
+                return
+            }
 
-                guard let remoteTrip = Trip.from(firestoreData: data, id: tripDoc.documentID) else {
+            for tripDoc in tripSnapshots.documents {
+                guard !Task.isCancelled else { return }
+
+                guard let remoteTrip = Trip.from(firestoreData: tripDoc.data(), id: tripDoc.documentID) else {
                     continue
                 }
 
-                // Fetch expenses for this trip.
                 let expenseSnapshots = try await expensesCollection(
                     tripID: tripDoc.documentID,
                     userID: userID
@@ -232,7 +262,6 @@ final class FirestoreService {
                     Expense.from(firestoreData: doc.data(), id: doc.documentID)
                 }
 
-                // Merge trip (and its expenses) into SwiftData.
                 try mergeTripIntoSwiftData(
                     remoteTrip: remoteTrip,
                     remoteExpenses: remoteExpenses,
@@ -241,10 +270,13 @@ final class FirestoreService {
             }
 
             try context.save()
-            print("[Firestore] Sync complete.")
+            loadedUID = userID
+            print("[Firestore] Sync complete for \(userID).")
         } catch {
-            syncError = error
-            print("[Firestore] Sync failed: \(error)")
+            if !Task.isCancelled {
+                syncError = error
+                print("[Firestore] Sync failed: \(error)")
+            }
         }
     }
 

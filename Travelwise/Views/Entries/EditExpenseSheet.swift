@@ -7,10 +7,12 @@ struct EditExpenseSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
 
+    @Environment(StoreKitService.self) private var storeKitService
     @State private var viewModel: ExpenseFormViewModel
     @State private var categories: [ExpenseCategory]
     @State private var showingNewCategorySheet = false
     @State private var isEditingCategories = false
+    @State private var showingProUpgrade = false
 
     init(expense: Expense, categories: [ExpenseCategory], currencyCode: String) {
         self.expense = expense
@@ -44,7 +46,24 @@ struct EditExpenseSheet: View {
                     longitude: $viewModel.longitude
                 )
 
-                PhotoPickerSection(imageData: $viewModel.photoData)
+                // Show picker if Pro, or if the expense already has a photo (preserve existing data after downgrade)
+                if storeKitService.isProUser || viewModel.photoData != nil {
+                    PhotoPickerSection(imageData: $viewModel.photoData)
+                } else {
+                    Section("Picture") {
+                        Button { showingProUpgrade = true } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.accentTeal)
+                                Text("Pro feature — Upgrade to add photos")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
+                }
             }
             .navigationTitle("Edit Expense")
             .navigationBarTitleDisplayMode(.inline)

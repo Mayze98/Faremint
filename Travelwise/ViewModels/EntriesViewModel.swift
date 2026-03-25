@@ -35,6 +35,14 @@ final class EntriesViewModel {
         }
     }
 
+    /// Call when the signed-in user changes so stale trip references are dropped.
+    func reset() {
+        displayedTrip = nil
+        showingAddTrip = false
+        showingAddExpense = false
+        showingEditTrip = false
+    }
+
     func handleFABTap(allTrips: [Trip]) {
         let activeTrips = trips(from: allTrips)
         if activeTrips.isEmpty {

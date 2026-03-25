@@ -7,9 +7,11 @@ struct AddExpenseSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
 
+    @Environment(StoreKitService.self) private var storeKitService
     @State private var viewModel: ExpenseFormViewModel
     @State private var showingNewCategorySheet = false
     @State private var isEditingCategories = false
+    @State private var showingProUpgrade = false
 
     init(trip: Trip) {
         self.trip = trip
@@ -41,7 +43,23 @@ struct AddExpenseSheet: View {
                     longitude: $viewModel.longitude
                 )
 
-                PhotoPickerSection(imageData: $viewModel.photoData)
+                if storeKitService.isProUser {
+                    PhotoPickerSection(imageData: $viewModel.photoData)
+                } else {
+                    Section("Picture") {
+                        Button { showingProUpgrade = true } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.accentTeal)
+                                Text("Pro feature — Upgrade to add photos")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
+                }
             }
             .navigationTitle("New Expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -243,4 +261,5 @@ struct AddExpenseSheet: View {
     AddExpenseSheet(trip: trip)
         .modelContainer(SampleData.container)
         .environment(FirestoreService())
+        .environment(StoreKitService())
 }

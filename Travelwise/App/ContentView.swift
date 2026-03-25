@@ -25,6 +25,7 @@ struct ContentView: View {
                     }
                     Tab("Map", systemImage: "map") {
                         MapTabView()
+                            .proFeatureGate("Expense Map")
                     }
                     Tab("Settings", systemImage: "gearshape") {
                         SettingsTabView()
@@ -45,4 +46,5 @@ struct ContentView: View {
         .modelContainer(SampleData.container)
         .environment(AuthService())
         .environment(FirestoreService())
+        .environment(StoreKitService())
 }

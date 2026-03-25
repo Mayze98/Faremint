@@ -2,7 +2,6 @@ import Foundation
 import StoreKit
 
 @Observable
-@MainActor
 final class StoreKitService {
 
     // MARK: - Constants
@@ -18,7 +17,17 @@ final class StoreKitService {
     var errorMessage: String?
 
     /// Set externally by TravelwiseApp when the signed-in user's email changes.
-    var currentUserEmail: String?
+    var currentUserEmail: String? {
+        didSet {
+            // When the user signs out (email becomes nil) or switches accounts,
+            // immediately revoke Pro access so stale status is never shown to
+            // the new user. updateSubscriptionStatus() will re-check entitlements
+            // for the new account after login.
+            if currentUserEmail == nil {
+                isProSubscribed = false
+            }
+        }
+    }
 
     // MARK: - Computed
 
@@ -32,22 +41,24 @@ final class StoreKitService {
         isSuperuser || isProSubscribed
     }
 
-    // MARK: - Private
-
-    private var transactionListener: Task<Void, Error>?
-
-    // MARK: - Init / deinit
+    // MARK: - Init
 
     init() {
-        transactionListener = listenForTransactions()
-        Task {
-            await loadProducts()
-            await updateSubscriptionStatus()
+        // Start listening for transaction updates immediately. The task is fire-and-forget;
+        // StoreKitService is an app-lifetime singleton so cleanup is not needed.
+        Task { [weak self] in
+            await self?.loadProducts()
+            await self?.updateSubscriptionStatus()
         }
-    }
-
-    deinit {
-        transactionListener?.cancel()
+        Task.detached { [weak self] in
+            for await result in Transaction.updates {
+                guard let self else { break }
+                if let transaction = try? Self.checkVerified(result) {
+                    await transaction.finish()
+                    await self.updateSubscriptionStatus()
+                }
+            }
+        }
     }
 
     // MARK: - Product loading
@@ -55,9 +66,9 @@ final class StoreKitService {
     func loadProducts() async {
         do {
             let products = try await Product.products(for: [Self.proMonthlyProductID])
-            proProduct = products.first
+            await MainActor.run { proProduct = products.first }
         } catch {
-            errorMessage = "Failed to load products."
+            await MainActor.run { errorMessage = "Failed to load products." }
         }
     }
 
@@ -65,27 +76,26 @@ final class StoreKitService {
 
     func purchasePro() async {
         guard let product = proProduct else { return }
-        purchaseInProgress = true
-        errorMessage = nil
-        defer { purchaseInProgress = false }
+        await MainActor.run { purchaseInProgress = true; errorMessage = nil }
 
         do {
             let result = try await product.purchase()
             switch result {
             case .success(let verification):
-                let transaction = try checkVerified(verification)
+                let transaction = try Self.checkVerified(verification)
                 await transaction.finish()
                 await updateSubscriptionStatus()
             case .userCancelled:
                 break
             case .pending:
-                errorMessage = "Purchase is pending approval."
+                await MainActor.run { errorMessage = "Purchase is pending approval." }
             @unknown default:
                 break
             }
         } catch {
-            errorMessage = "Purchase failed: \(error.localizedDescription)"
+            await MainActor.run { errorMessage = "Purchase failed: \(error.localizedDescription)" }
         }
+        await MainActor.run { purchaseInProgress = false }
     }
 
     // MARK: - Restore
@@ -95,7 +105,7 @@ final class StoreKitService {
             try await AppStore.sync()
             await updateSubscriptionStatus()
         } catch {
-            errorMessage = "Restore failed: \(error.localizedDescription)"
+            await MainActor.run { errorMessage = "Restore failed: \(error.localizedDescription)" }
         }
     }
 
@@ -104,33 +114,19 @@ final class StoreKitService {
     func updateSubscriptionStatus() async {
         var hasActive = false
         for await result in Transaction.currentEntitlements {
-            guard let transaction = try? checkVerified(result) else { continue }
+            guard let transaction = try? Self.checkVerified(result) else { continue }
             if transaction.productID == Self.proMonthlyProductID,
                transaction.revocationDate == nil {
                 hasActive = true
                 break
             }
         }
-        isProSubscribed = hasActive
-    }
-
-    // MARK: - Transaction listener
-
-    private func listenForTransactions() -> Task<Void, Error> {
-        Task.detached { [weak self] in
-            for await result in Transaction.updates {
-                guard let self else { break }
-                if let transaction = try? self.checkVerified(result) {
-                    await transaction.finish()
-                    await self.updateSubscriptionStatus()
-                }
-            }
-        }
+        await MainActor.run { isProSubscribed = hasActive }
     }
 
     // MARK: - Verification helper
 
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    nonisolated static func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified(_, let error):
             throw error

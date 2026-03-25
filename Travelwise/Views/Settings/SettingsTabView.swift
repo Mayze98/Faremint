@@ -3,10 +3,12 @@ import SwiftData
 
 struct SettingsTabView: View {
     @Environment(AuthService.self) private var authService
+    @Environment(StoreKitService.self) private var storeKitService
     @Query private var trips: [Trip]
     @AppStorage("appearanceMode") private var appearanceMode = 0
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var showingSignOutAlert = false
+    @State private var showingProUpgrade = false
 
     var body: some View {
         NavigationStack {
@@ -21,6 +23,57 @@ struct SettingsTabView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.horizontal)
+
+                    // Pro section
+                    if storeKitService.isProUser {
+                        SettingsSection(title: "TRAVELWISE PRO") {
+                            HStack(spacing: 14) {
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.yellow)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.yellow.opacity(0.12))
+                                    .clipShape(Circle())
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Pro Active")
+                                        .font(.subheadline.weight(.medium))
+                                    Text(storeKitService.isSuperuser ? "Developer access" : "Subscription active")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(.green)
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    } else {
+                        SettingsSection(title: "TRAVELWISE PRO") {
+                            Button { showingProUpgrade = true } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "crown.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.yellow)
+                                        .frame(width: 36, height: 36)
+                                        .background(Color.yellow.opacity(0.12))
+                                        .clipShape(Circle())
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Upgrade to Pro")
+                                            .font(.subheadline.weight(.medium))
+                                        Text("Maps, Photos, Exports & more")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 8)
+                            }
+                            .tint(.primary)
+                        }
+                    }
 
                     // Account section
                     SettingsSection(title: "ACCOUNT") {
@@ -82,6 +135,40 @@ struct SettingsTabView: View {
                             )
                         }
                         Divider()
+                        if storeKitService.isProUser {
+                            if let pdfURL = PDFExporter.pdfFileURL(for: trips, currencyCode: currencyCode) {
+                                ShareLink(item: pdfURL, preview: SharePreview("PDF Summary", image: Image(systemName: "doc.richtext"))) {
+                                    SettingsRowView(
+                                        icon: "doc.richtext",
+                                        iconColor: .orange,
+                                        title: "Export PDF Summary",
+                                        subtitle: "Trip summaries with category charts"
+                                    )
+                                }
+                                .tint(.primary)
+                                Divider()
+                                ShareLink(item: pdfURL, preview: SharePreview("Tax Report", image: Image(systemName: "doc.text.magnifyingglass"))) {
+                                    SettingsRowView(
+                                        icon: "doc.text.magnifyingglass",
+                                        iconColor: .green,
+                                        title: "Export Tax Report",
+                                        subtitle: "Chronological expense list for tax filing"
+                                    )
+                                }
+                                .tint(.primary)
+                            }
+                        } else {
+                            Button { showingProUpgrade = true } label: {
+                                SettingsRowView(
+                                    icon: "doc.richtext",
+                                    iconColor: .orange,
+                                    title: "PDF & Tax Reports",
+                                    subtitle: "Pro — Upgrade to unlock"
+                                )
+                            }
+                            .tint(.primary)
+                        }
+                        Divider()
                         HStack(spacing: 14) {
                             Image(systemName: appearanceMode == 2 ? "moon.fill" : "sun.max.fill")
                                 .font(.system(size: 14, weight: .semibold))
@@ -109,33 +196,6 @@ struct SettingsTabView: View {
                             .frame(width: 120)
                         }
                         .padding(.vertical, 8)
-                    }
-
-                    // Support section
-                    SettingsSection(title: "SUPPORT") {
-                        NavigationLink {
-                            Text("Help & Support")
-                        } label: {
-                            SettingsRowView(
-                                icon: "questionmark.circle",
-                                iconColor: .green,
-                                title: "Help & Support",
-                                subtitle: "Get help with Travelwise"
-                            )
-                        }
-                        .tint(.primary)
-                        Divider()
-                        NavigationLink {
-                            Text("Terms & Privacy")
-                        } label: {
-                            SettingsRowView(
-                                icon: "doc.text",
-                                iconColor: .green,
-                                title: "Terms & Privacy",
-                                subtitle: "Legal information"
-                            )
-                        }
-                        .tint(.primary)
                     }
 
                     // Sign Out
@@ -171,6 +231,9 @@ struct SettingsTabView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .sheet(isPresented: $showingProUpgrade) {
+                ProUpgradeView()
+            }
         }
     }
 }
@@ -201,4 +264,5 @@ struct SettingsSection<Content: View>: View {
 #Preview {
     SettingsTabView()
         .environment(AuthService())
+        .environment(StoreKitService())
 }

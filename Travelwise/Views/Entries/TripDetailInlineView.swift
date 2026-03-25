@@ -5,8 +5,12 @@ import SwiftData
 struct TripDetailInlineView: View {
     @Bindable var trip: Trip
     @Environment(\.modelContext) private var modelContext
+    @Environment(StoreKitService.self) private var storeKitService
+    @Environment(FirestoreService.self) private var firestoreService
     @AppStorage("currencyCode") private var homeCurrency = "CAD"
     @State private var showingAddExpense = false
+    @State private var showingRebalanceSheet = false
+    @State private var rebalanceSuggestions: [RebalanceSuggestion] = []
 
     // Live query so the list updates immediately when expenses are added/deleted
     @Query private var expenses: [Expense]
@@ -74,6 +78,23 @@ struct TripDetailInlineView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+
+                    // Pro: rebalance button when any category is overspent
+                    if storeKitService.isProUser {
+                        let suggestions = BudgetRebalancer.rebalance(trip: trip)
+                        if !suggestions.isEmpty {
+                            Button {
+                                rebalanceSuggestions = suggestions
+                                showingRebalanceSheet = true
+                            } label: {
+                                Label("Rebalance Budget", systemImage: "arrow.triangle.branch")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Theme.accentTeal)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 2)
+                        }
+                    }
                 }
                 .padding(.vertical, 4)
             }
@@ -110,6 +131,9 @@ struct TripDetailInlineView: View {
             }
         }
         .contentMargins(.top, 0, for: .scrollContent)
+        .sheet(isPresented: $showingRebalanceSheet) {
+            BudgetRebalanceSheet(trip: trip, suggestions: rebalanceSuggestions)
+        }
     }
 
     private func categoryHeader(for group: (category: String, expenses: [Expense], total: Double, limit: Double?)) -> some View {

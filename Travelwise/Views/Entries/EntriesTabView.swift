@@ -1,9 +1,11 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth
 
 struct EntriesTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
+    @Environment(AuthService.self) private var authService
     @State private var viewModel = EntriesViewModel()
     @State private var showingPastTrips = false
 
@@ -114,6 +116,9 @@ struct EntriesTabView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
+            .onChange(of: authService.currentUser?.uid) { _, _ in
+                viewModel.reset()
+            }
             .overlay(alignment: .bottomTrailing) {
                 Button {
                     viewModel.handleFABTap(allTrips: allTrips)

@@ -1,24 +1,66 @@
 import Foundation
 
 /// Fetches live exchange rates from the Frankfurter API (https://api.frankfurter.app).
-/// Rates are cached in memory for the app session to avoid redundant network calls.
+/// Rates are cached to disk for 24 hours. On network failure, a stale cached value is
+/// returned as a fallback rather than surfacing an error to the user.
 final class ExchangeRateService {
 
     static let shared = ExchangeRateService()
 
-    private var cache: [String: Double] = [:]
+    private struct CachedRate: Codable {
+        let rate: Double
+        let fetchedAt: Date
+    }
 
-    private init() {}
+    private let cacheURL: URL = {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return dir.appendingPathComponent("exchange_rates.json")
+    }()
+
+    private let maxAge: TimeInterval = 60 * 60 * 24   // 24 hours
+    private var cache: [String: CachedRate] = [:]
+
+    private init() {
+        loadCacheFromDisk()
+    }
 
     /// Returns the exchange rate to convert one unit of `from` into `to`.
     /// Returns `1.0` immediately when both codes are equal.
-    /// Throws if the network request fails or the response cannot be parsed.
+    /// Falls back to a stale cached value if the network is unavailable.
+    /// Throws only if no cached value exists and the network request fails.
     func rate(from: String, to: String) async throws -> Double {
         guard from != to else { return 1.0 }
 
         let key = "\(from)→\(to)"
-        if let cached = cache[key] { return cached }
 
+        // Return disk-cached value if still fresh
+        if let cached = cache[key], Date().timeIntervalSince(cached.fetchedAt) < maxAge {
+            return cached.rate
+        }
+
+        do {
+            let fetched = try await fetchFromNetwork(from: from, to: to)
+            cache[key] = CachedRate(rate: fetched, fetchedAt: Date())
+            saveCacheToDisk()
+            return fetched
+        } catch {
+            // Network failed — return stale cache if available rather than showing an error
+            if let stale = cache[key] {
+                print("[ExchangeRate] Network failed, using stale cache for \(key): \(stale.rate)")
+                return stale.rate
+            }
+            // Retry once after a short delay
+            try await Task.sleep(for: .seconds(2))
+            let retried = try await fetchFromNetwork(from: from, to: to)
+            cache[key] = CachedRate(rate: retried, fetchedAt: Date())
+            saveCacheToDisk()
+            return retried
+        }
+    }
+
+    // MARK: - Network
+
+    private func fetchFromNetwork(from: String, to: String) async throws -> Double {
         var components = URLComponents(string: "https://api.frankfurter.app/latest")!
         components.queryItems = [
             URLQueryItem(name: "from", value: from),
@@ -44,8 +86,22 @@ final class ExchangeRateService {
             throw ExchangeRateError.missingRate(to)
         }
 
-        cache[key] = rate
         return rate
+    }
+
+    // MARK: - Disk persistence
+
+    private func loadCacheFromDisk() {
+        guard let data = try? Data(contentsOf: cacheURL),
+              let decoded = try? JSONDecoder().decode([String: CachedRate].self, from: data) else {
+            return
+        }
+        cache = decoded
+    }
+
+    private func saveCacheToDisk() {
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        try? data.write(to: cacheURL, options: .atomic)
     }
 }
 

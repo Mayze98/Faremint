@@ -75,6 +75,169 @@ final class AddTripFlowViewModel {
         self.homeCurrency = UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD"
     }
 
+    // MARK: - Smart Currency Inference
+
+    /// Infers a trip currency from the destination name and updates `tripCurrency`
+    /// if a confident match is found. Does nothing if no match is found so the
+    /// user's existing selection is preserved.
+    func inferCurrency(from name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count >= 2 else { return }
+        guard let code = Self.currencyCode(for: trimmed) else { return }
+        guard code != tripCurrency else { return }
+        tripCurrency = code
+        // Reset and pre-fetch immediately so the rate is ready by the time
+        // the user reaches the budget step.
+        exchangeRate = nil
+        rateError = false
+        Task { await fetchExchangeRate() }
+    }
+
+    /// Maps destination keywords (countries, regions, major cities) to ISO 4217
+    /// currency codes. Matching is case-insensitive and checks whether any word
+    /// in the lookup key appears as a whole word in the input.
+    private static func currencyCode(for input: String) -> String? {
+        let lower = input.lowercased()
+
+        // Ordered from most-specific to least-specific so "new york" doesn't
+        // accidentally match "york" before the full phrase is checked.
+        let table: [(keywords: [String], code: String)] = [
+            // Americas
+            (["usa", "united states", "america", "new york", "los angeles", "chicago",
+              "san francisco", "miami", "las vegas", "boston", "seattle", "hawaii",
+              "washington", "texas", "california", "florida"], "USD"),
+            (["canada", "toronto", "vancouver", "montreal", "calgary", "ottawa"], "CAD"),
+            (["mexico", "cancun", "mexico city", "guadalajara", "tulum", "cabo"], "MXN"),
+            (["brazil", "rio", "são paulo", "sao paulo", "brasilia", "salvador"], "BRL"),
+            (["argentina", "buenos aires"], "ARS"),
+            (["chile", "santiago"], "CLP"),
+            (["colombia", "bogota", "medellin", "cartagena"], "COP"),
+            (["peru", "lima", "machu picchu", "cusco"], "PEN"),
+            (["cuba", "havana"], "CUP"),
+            (["costa rica", "san jose"], "CRC"),
+            (["jamaica", "kingston"], "JMD"),
+
+            // Europe
+            (["france", "paris", "nice", "marseille", "bordeaux", "lyon"], "EUR"),
+            (["germany", "berlin", "munich", "frankfurt", "hamburg"], "EUR"),
+            (["spain", "barcelona", "madrid", "seville", "ibiza", "mallorca", "valencia"], "EUR"),
+            (["italy", "rome", "milan", "venice", "florence", "naples", "sicily",
+              "amalfi", "tuscany"], "EUR"),
+            (["greece", "athens", "santorini", "mykonos", "crete", "rhodes"], "EUR"),
+            (["portugal", "lisbon", "porto", "algarve"], "EUR"),
+            (["netherlands", "amsterdam", "rotterdam"], "EUR"),
+            (["belgium", "brussels", "bruges", "antwerp"], "EUR"),
+            (["austria", "vienna", "salzburg", "innsbruck"], "EUR"),
+            (["ireland", "dublin"], "EUR"),
+            (["finland", "helsinki"], "EUR"),
+            (["croatia", "dubrovnik", "split", "zagreb"], "EUR"),
+            (["uk", "united kingdom", "england", "london", "edinburgh", "manchester",
+              "liverpool", "bristol", "oxford", "cambridge", "scotland", "wales"], "GBP"),
+            (["switzerland", "zurich", "geneva", "bern", "lucerne"], "CHF"),
+            (["norway", "oslo", "bergen", "tromsø", "tromso"], "NOK"),
+            (["sweden", "stockholm", "gothenburg", "malmo"], "SEK"),
+            (["denmark", "copenhagen"], "DKK"),
+            (["poland", "warsaw", "krakow", "gdansk"], "PLN"),
+            (["czechia", "czech", "prague", "brno"], "CZK"),
+            (["hungary", "budapest"], "HUF"),
+            (["romania", "bucharest"], "RON"),
+            (["russia", "moscow", "st. petersburg", "saint petersburg"], "RUB"),
+            (["turkey", "istanbul", "ankara", "cappadocia", "antalya", "bodrum"], "TRY"),
+            (["ukraine", "kyiv"], "UAH"),
+
+            // Asia
+            (["japan", "tokyo", "osaka", "kyoto", "hiroshima", "sapporo", "nara",
+              "hakone", "okinawa"], "JPY"),
+            (["china", "beijing", "shanghai", "shenzhen", "guangzhou", "chengdu",
+              "xian", "xi'an", "hangzhou", "suzhou", "guilin", "yunnan"], "CNY"),
+            (["south korea", "korea", "seoul", "busan", "jeju"], "KRW"),
+            (["hong kong"], "HKD"),
+            (["taiwan", "taipei", "taichung", "tainan", "kaohsiung"], "TWD"),
+            (["singapore"], "SGD"),
+            (["thailand", "bangkok", "phuket", "chiang mai", "pattaya", "koh samui",
+              "krabi"], "THB"),
+            (["vietnam", "hanoi", "ho chi minh", "saigon", "danang", "hoi an",
+              "ha long", "halong"], "VND"),
+            (["indonesia", "bali", "jakarta", "lombok", "yogyakarta", "komodo"], "IDR"),
+            (["malaysia", "kuala lumpur", "kl", "penang", "langkawi", "borneo"], "MYR"),
+            (["philippines", "manila", "cebu", "boracay", "palawan"], "PHP"),
+            (["india", "mumbai", "delhi", "new delhi", "goa", "jaipur", "agra",
+              "varanasi", "kerala", "bangalore", "bengaluru", "kolkata", "taj mahal",
+              "rajasthan"], "INR"),
+            (["nepal", "kathmandu", "pokhara", "everest"], "NPR"),
+            (["sri lanka", "colombo", "kandy", "sigiriya"], "LKR"),
+            (["maldives", "malé", "male"], "MVR"),
+            (["cambodia", "siem reap", "angkor", "phnom penh"], "KHR"),
+            (["myanmar", "burma", "yangon", "bagan"], "MMK"),
+            (["laos", "luang prabang", "vientiane"], "LAK"),
+            (["mongolia", "ulaanbaatar"], "MNT"),
+            (["pakistan", "islamabad", "lahore", "karachi"], "PKR"),
+            (["bangladesh", "dhaka"], "BDT"),
+            (["kazakhstan", "almaty", "astana"], "KZT"),
+            (["uzbekistan", "tashkent", "samarkand", "bukhara"], "UZS"),
+            (["georgia", "tbilisi", "batumi"], "GEL"),
+            (["armenia", "yerevan"], "AMD"),
+            (["azerbaijan", "baku"], "AZN"),
+
+            // Middle East
+            (["uae", "united arab emirates", "dubai", "abu dhabi"], "AED"),
+            (["saudi arabia", "riyadh", "jeddah", "mecca"], "SAR"),
+            (["israel", "tel aviv", "jerusalem"], "ILS"),
+            (["jordan", "amman", "petra", "wadi rum"], "JOD"),
+            (["egypt", "cairo", "luxor", "aswan", "hurghada", "sharm el sheikh"], "EGP"),
+            (["morocco", "marrakech", "casablanca", "fes", "fez", "rabat", "tangier"], "MAD"),
+            (["qatar", "doha"], "QAR"),
+            (["kuwait", "kuwait city"], "KWD"),
+            (["bahrain", "manama"], "BHD"),
+            (["oman", "muscat", "salalah"], "OMR"),
+
+            // Africa
+            (["south africa", "cape town", "johannesburg", "safari", "kruger",
+              "durban", "pretoria"], "ZAR"),
+            (["kenya", "nairobi", "masai mara", "mombasa", "kilimanjaro"], "KES"),
+            (["tanzania", "zanzibar", "dar es salaam", "serengeti"], "TZS"),
+            (["ethiopia", "addis ababa"], "ETB"),
+            (["ghana", "accra"], "GHS"),
+            (["nigeria", "lagos", "abuja"], "NGN"),
+            (["senegal", "dakar"], "XOF"),
+            (["côte d'ivoire", "ivory coast", "abidjan"], "XOF"),
+            (["madagascar"], "MGA"),
+            (["mauritius"], "MUR"),
+            (["seychelles", "seychelles islands"], "SCR"),
+            (["zimbabwe", "harare", "victoria falls"], "ZWL"),
+            (["zambia", "lusaka", "livingstone"], "ZMW"),
+            (["botswana", "gaborone", "okavango"], "BWP"),
+            (["namibia", "windhoek"], "NAD"),
+            (["rwanda", "kigali"], "RWF"),
+            (["uganda", "kampala"], "UGX"),
+
+            // Oceania
+            (["australia", "sydney", "melbourne", "brisbane", "perth", "gold coast",
+              "cairns", "great barrier reef", "uluru"], "AUD"),
+            (["new zealand", "auckland", "queenstown", "wellington", "christchurch",
+              "rotorua", "fiordland"], "NZD"),
+            (["fiji", "suva", "nadi"], "FJD"),
+            (["hawaii"], "USD"),  // already covered above but explicit for clarity
+        ]
+
+        // Build a set of whole words from the input for efficient matching.
+        let inputWords = Set(lower.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty })
+
+        for (keywords, code) in table {
+            for keyword in keywords {
+                // Multi-word keyword: check substring match.
+                // Single-word keyword: check whole-word match to avoid false positives.
+                let kwWords = keyword.components(separatedBy: " ")
+                if kwWords.count > 1 {
+                    if lower.contains(keyword) { return code }
+                } else {
+                    if inputWords.contains(keyword) { return code }
+                }
+            }
+        }
+        return nil
+    }
+
     // MARK: - Exchange Rate
 
     func fetchExchangeRate() async {
@@ -165,24 +328,59 @@ final class AddTripFlowViewModel {
     func autoAllocateBudget() {
         let budget = max(budgetValue - mustSpendTotal, 0)
         let percents = adjustedPercentsForMustSpend(basePercents: effectivePercents())
-        var allocated: Double = 0
-        for (categoryName, percent) in percents {
-            let amount = (budget * percent).rounded(.down)
-            categoryLimits[categoryName] = String(Int(amount))
-            allocated += amount
+
+        // Only allocate categories with a non-zero percentage.
+        let activeCategories = percents.filter { $0.value > 0 }
+        guard !activeCategories.isEmpty else { return }
+
+        // Step 1: Compute the exact (unrounded) share for each category.
+        let exactAmounts: [(name: String, exact: Double)] = activeCategories.map { name, pct in
+            (name, budget * pct)
         }
+
+        // Step 2: Round each share DOWN to the nearest multiple of 5.
+        var rounded: [String: Int] = [:]
+        for item in exactAmounts {
+            rounded[item.name] = roundDownTo5(item.exact)
+        }
+
+        // Step 3: The rounding-down leaves a deficit vs the total budget.
+        // Distribute it in increments of 5, largest-remainder-first, so the
+        // allocations always sum exactly to the (5-rounded) budget target.
+        let targetTotal = roundDownTo5(budget)   // total budget rounded to nearest 5
+        let currentTotal = rounded.values.reduce(0, +)
+        var deficit = targetTotal - currentTotal  // always a multiple of 5 >= 0
+
+        // Rank by how much was "lost" rounding down (i.e. exact - roundedDown).
+        let remainders = exactAmounts
+            .map { item in (name: item.name, loss: item.exact - Double(rounded[item.name]!)) }
+            .sorted { $0.loss > $1.loss }
+
+        var i = 0
+        while deficit >= 5 && i < remainders.count {
+            rounded[remainders[i].name, default: 0] += 5
+            deficit -= 5
+            i += 1
+        }
+
+        // Write allocations back.
+        for (name, amount) in rounded {
+            categoryLimits[name] = String(amount)
+        }
+
+        // Step 4: Add must-spend fixed costs on top, rounded to nearest 5.
         let mustSpendByCategory = Dictionary(grouping: mustSpendItems, by: { $0.category.rawValue })
             .mapValues { items in items.compactMap { Double($0.amount) }.reduce(0, +) }
         for (categoryName, amount) in mustSpendByCategory {
             let current = Double(categoryLimits[categoryName] ?? "0") ?? 0
-            let updated = (current + amount).rounded(.down)
-            categoryLimits[categoryName] = String(Int(updated))
+            categoryLimits[categoryName] = String(roundDownTo5(current + amount))
         }
-        let remainder = budget - allocated
-        if remainder > 0, let remainderCategory = remainderCategoryName(excluding: mustSpendExclusionCategories) {
-            let current = Double(categoryLimits[remainderCategory] ?? "0") ?? 0
-            categoryLimits[remainderCategory] = String(Int((current + remainder).rounded(.down)))
-        }
+    }
+
+    /// Rounds a value down to the nearest multiple of 5.
+    private func roundDownTo5(_ value: Double) -> Int {
+        let intVal = Int(value)
+        return intVal - (intVal % 5)
     }
 
     var mustSpendExclusionCategories: Set<String> {

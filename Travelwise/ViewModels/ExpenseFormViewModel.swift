@@ -89,7 +89,7 @@ final class ExpenseFormViewModel {
     }
 
     var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespaces).isEmpty && amountValue > 0
+        amountValue > 0
     }
 
     // MARK: - Exchange Rate

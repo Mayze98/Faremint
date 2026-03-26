@@ -32,18 +32,22 @@ struct ExpenseCategory: Codable, Hashable, Identifiable {
     let systemImage: String
     let isCustom: Bool
     var budgetLimit: Double?
+    /// Hex color string for custom categories (e.g. "FF6B6B"). Nil for built-in categories.
+    var colorHex: String?
 
     init(base: BaseCategory, budgetLimit: Double? = nil) {
         self.name = base.rawValue
         self.systemImage = base.systemImage
         self.isCustom = false
         self.budgetLimit = budgetLimit
+        self.colorHex = nil
     }
 
-    init(customName: String, systemImage: String = "tag.fill", budgetLimit: Double? = nil) {
+    init(customName: String, systemImage: String = "tag.fill", colorHex: String? = nil, budgetLimit: Double? = nil) {
         self.name = customName
         self.systemImage = systemImage
         self.isCustom = true
         self.budgetLimit = budgetLimit
+        self.colorHex = colorHex
     }
 }

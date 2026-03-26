@@ -7,7 +7,27 @@ struct NewCategorySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var selectedIcon = "tag.fill"
+    @State private var selectedColorHex = "4ECDC4"
     @State private var showDuplicateError = false
+
+    private let colorOptions: [(hex: String, label: String)] = [
+        ("4ECDC4", "Teal"),
+        ("FF6B6B", "Red"),
+        ("45B7D1", "Sky"),
+        ("96CEB4", "Sage"),
+        ("FFEAA7", "Yellow"),
+        ("DDA0DD", "Plum"),
+        ("F7DC6F", "Gold"),
+        ("98D8C8", "Mint"),
+        ("E17055", "Coral"),
+        ("6C5CE7", "Purple"),
+        ("00B894", "Green"),
+        ("FD79A8", "Pink"),
+        ("74B9FF", "Blue"),
+        ("A29BFE", "Lavender"),
+        ("55EFC4", "Aqua"),
+        ("636E72", "Grey"),
+    ]
 
     private let iconOptions: [String] = [
         "fork.knife",
@@ -65,6 +85,31 @@ struct NewCategorySheet: View {
                     }
                 }
 
+                Section("Color") {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 8), spacing: 10) {
+                        ForEach(colorOptions, id: \.hex) { option in
+                            Button {
+                                selectedColorHex = option.hex
+                            } label: {
+                                Circle()
+                                    .fill(Color(hex: option.hex))
+                                    .frame(width: 32, height: 32)
+                                    .overlay {
+                                        if selectedColorHex == option.hex {
+                                            Circle()
+                                                .strokeBorder(.white, lineWidth: 2.5)
+                                            Circle()
+                                                .strokeBorder(Color(hex: option.hex), lineWidth: 1.5)
+                                                .frame(width: 38, height: 38)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
                 Section("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
                         ForEach(iconOptions, id: \.self) { icon in
@@ -76,17 +121,17 @@ struct NewCategorySheet: View {
                                     .frame(width: 36, height: 36)
                                     .background(
                                         selectedIcon == icon
-                                            ? Theme.accentTeal.opacity(0.15)
+                                            ? Color(hex: selectedColorHex).opacity(0.15)
                                             : Color(.systemGray6)
                                     )
                                     .foregroundStyle(
-                                        selectedIcon == icon ? Theme.accentTeal : .secondary
+                                        selectedIcon == icon ? Color(hex: selectedColorHex) : .secondary
                                     )
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
                                             .strokeBorder(
-                                                selectedIcon == icon ? Theme.accentTeal : .clear,
+                                                selectedIcon == icon ? Color(hex: selectedColorHex) : .clear,
                                                 lineWidth: 2
                                             )
                                     )
@@ -109,7 +154,7 @@ struct NewCategorySheet: View {
                             showDuplicateError = true
                             return
                         }
-                        let category = ExpenseCategory(customName: trimmedName, systemImage: selectedIcon)
+                        let category = ExpenseCategory(customName: trimmedName, systemImage: selectedIcon, colorHex: selectedColorHex)
                         onSave(category)
                         dismiss()
                     }

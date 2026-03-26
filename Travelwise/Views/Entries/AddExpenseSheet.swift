@@ -37,11 +37,26 @@ struct AddExpenseSheet: View {
                         .lineLimit(3...6)
                 }
 
-                LocationPickerSection(
-                    locationName: $viewModel.locationName,
-                    latitude: $viewModel.latitude,
-                    longitude: $viewModel.longitude
-                )
+                if storeKitService.isProUser {
+                    LocationPickerSection(
+                        locationName: $viewModel.locationName,
+                        latitude: $viewModel.latitude,
+                        longitude: $viewModel.longitude
+                    )
+                } else {
+                    Section("Location") {
+                        Button { showingProUpgrade = true } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.accentTeal)
+                                Text("Pro feature — Upgrade to tag location")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
 
                 if storeKitService.isProUser {
                     PhotoPickerSection(imageData: $viewModel.photoData)

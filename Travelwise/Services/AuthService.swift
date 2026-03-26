@@ -74,6 +74,14 @@ final class AuthService {
         try await user.sendEmailVerification()
     }
 
+    /// Re-authenticates with `currentPassword`, then updates to `newPassword`.
+    func changePassword(currentPassword: String, newPassword: String) async throws {
+        guard let user = Auth.auth().currentUser, let email = user.email else { return }
+        let credential = EmailAuthProvider.credential(withEmail: email, password: currentPassword)
+        try await user.reauthenticate(with: credential)
+        try await user.updatePassword(to: newPassword)
+    }
+
     func reloadUser() async throws {
         guard let user = Auth.auth().currentUser else { return }
         try await user.reload()

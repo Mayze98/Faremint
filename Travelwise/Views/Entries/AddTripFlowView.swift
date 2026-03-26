@@ -10,6 +10,8 @@ struct AddTripFlowView: View {
     @State private var viewModel: AddTripFlowViewModel
     @State private var showingCurrencyPicker = false
     @State private var showingNewCategorySheet = false
+    @State private var showingStartDatePicker = false
+    @State private var showingEndDatePicker = false
 
     init(isPresented: Binding<Bool>) {
         _isPresented = isPresented
@@ -26,20 +28,19 @@ struct AddTripFlowView: View {
             VStack(spacing: 0) {
                 // Top bar
                 HStack {
+                    // Back button (or hidden placeholder on step 0)
                     Button {
                         withAnimation(.easeInOut(duration: 0.3)) {
-                            if viewModel.goBack() {
-                                withAnimation(.easeInOut(duration: 0.35)) {
-                                    isPresented = false
-                                }
-                            }
+                            _ = viewModel.goBack()
                         }
                     } label: {
-                        Image(systemName: viewModel.step > 0 ? "chevron.left" : "xmark")
+                        Image(systemName: "chevron.left")
                             .font(.title3.weight(.medium))
                             .foregroundStyle(.secondary)
                             .frame(width: 40, height: 40)
                     }
+                    .opacity(viewModel.step > 0 ? 1 : 0)
+                    .disabled(viewModel.step == 0)
 
                     Spacer()
 
@@ -55,8 +56,17 @@ struct AddTripFlowView: View {
 
                     Spacer()
 
-                    // Invisible spacer to balance the back button
-                    Color.clear.frame(width: 40, height: 40)
+                    // Close button — always visible
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.35)) {
+                            isPresented = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.title3.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 40, height: 40)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
@@ -147,6 +157,9 @@ struct AddTripFlowView: View {
                 .padding(.vertical, 14)
                 .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 14))
                 .padding(.horizontal, 32)
+                .onChange(of: viewModel.name) { _, newName in
+                    viewModel.inferCurrency(from: newName)
+                }
 
             // Color picker
             VStack(spacing: 12) {
@@ -182,17 +195,16 @@ struct AddTripFlowView: View {
                         Text("Start")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(viewModel.startDate, format: .dateTime.month(.abbreviated).day().year())
-                            .font(.subheadline.weight(.medium))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-                            .overlay {
-                                DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
-                                    .labelsHidden()
-                                    .colorMultiply(.clear)
-                                    .allowsHitTesting(true)
-                            }
+                        Button {
+                            showingStartDatePicker = true
+                        } label: {
+                            Text(viewModel.startDate, format: .dateTime.month(.abbreviated).day().year())
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                        }
                     }
 
                     Image(systemName: "arrow.right")
@@ -204,17 +216,16 @@ struct AddTripFlowView: View {
                         Text("End")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(viewModel.endDate, format: .dateTime.month(.abbreviated).day().year())
-                            .font(.subheadline.weight(.medium))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-                            .overlay {
-                                DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
-                                    .labelsHidden()
-                                    .colorMultiply(.clear)
-                                    .allowsHitTesting(true)
-                            }
+                        Button {
+                            showingEndDatePicker = true
+                        } label: {
+                            Text(viewModel.endDate, format: .dateTime.month(.abbreviated).day().year())
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                        }
                     }
                 }
 
@@ -225,6 +236,16 @@ struct AddTripFlowView: View {
             .padding(.horizontal, 32)
             .onChange(of: viewModel.startDate) { _, _ in
                 viewModel.ensureEndDateAfterStart()
+                // Automatically open end date picker after start date is selected
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showingEndDatePicker = true
+                }
+            }
+            .sheet(isPresented: $showingStartDatePicker) {
+                DatePickerSheet(title: "Start Date", selection: $viewModel.startDate, minimumDate: nil)
+            }
+            .sheet(isPresented: $showingEndDatePicker) {
+                DatePickerSheet(title: "End Date", selection: $viewModel.endDate, minimumDate: viewModel.startDate)
             }
         }
         .padding(.horizontal)
@@ -253,14 +274,28 @@ struct AddTripFlowView: View {
                 .foregroundStyle(.secondary)
 
             // Budget input — always in home currency
-            HStack(spacing: 2) {
-                Text(viewModel.homeCurrencySymbol)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                TextField("0", text: $viewModel.budget)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .keyboardType(.decimalPad)
-                    .fixedSize(horizontal: true, vertical: false)
+            VStack(spacing: 6) {
+                // Clear label so the user knows this is their home currency
+                HStack(spacing: 4) {
+                    Image(systemName: "house")
+                        .font(.caption2)
+                    Text("Budget in \(viewModel.homeCurrency)")
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Color(.systemGray6), in: Capsule())
+
+                HStack(spacing: 2) {
+                    Text(viewModel.homeCurrencySymbol)
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    TextField("0", text: $viewModel.budget)
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .keyboardType(.decimalPad)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
             }
             .frame(maxWidth: .infinity)
 
@@ -707,6 +742,55 @@ private struct TripCurrencyPickerSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Date Picker Sheet
+
+private struct DatePickerSheet: View {
+    let title: String
+    @Binding var selection: Date
+    let minimumDate: Date?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                if let minimumDate {
+                    DatePicker(
+                        "",
+                        selection: $selection,
+                        in: minimumDate...,
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.graphical)
+                    .tint(Theme.accentTeal)
+                    .padding(.horizontal)
+                } else {
+                    DatePicker(
+                        "",
+                        selection: $selection,
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.graphical)
+                    .tint(Theme.accentTeal)
+                    .padding(.horizontal)
+                }
+                Spacer()
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.accentTeal)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

@@ -29,6 +29,14 @@ enum Theme {
     static func colorForCategory(_ name: String) -> Color {
         categoryColors[name] ?? .gray
     }
+
+    /// Returns the color for a category, using its custom colorHex if present.
+    static func colorForCategory(_ category: ExpenseCategory) -> Color {
+        if let hex = category.colorHex {
+            return Color(hex: hex)
+        }
+        return categoryColors[category.name] ?? .gray
+    }
 }
 
 extension Color {

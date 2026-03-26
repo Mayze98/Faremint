@@ -405,6 +405,7 @@ extension Trip {
                 "isCustom": cat.isCustom,
             ]
             if let limit = cat.budgetLimit { d["budgetLimit"] = limit }
+            if let hex = cat.colorHex { d["colorHex"] = hex }
             return d
         }
         return data
@@ -432,8 +433,9 @@ extension Trip {
                     let isCustom = d["isCustom"] as? Bool
                 else { return nil }
                 let limit = d["budgetLimit"] as? Double
+                let colorHex = d["colorHex"] as? String
                 return isCustom
-                    ? ExpenseCategory(customName: name, systemImage: image, budgetLimit: limit)
+                    ? ExpenseCategory(customName: name, systemImage: image, colorHex: colorHex, budgetLimit: limit)
                     : ExpenseCategory(base: BaseCategory(rawValue: name) ?? .foodAndDrinks,
                                       budgetLimit: limit)
             }

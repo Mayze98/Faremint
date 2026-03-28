@@ -54,7 +54,7 @@ struct PastTripStatsView: View {
                 .padding(.horizontal)
 
                 // Pie chart
-                SpendingPieChart(categoryTotals: categoryTotals)
+                SpendingPieChart(categoryTotals: categoryTotals, currencyCode: homeCurrency)
                     .padding(.horizontal)
 
                 // Category breakdown

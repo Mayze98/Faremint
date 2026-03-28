@@ -57,6 +57,93 @@ final class StatsViewModel {
         }.sorted { $0.total > $1.total }
     }
 
+    // MARK: - Daily Average
+
+    /// Number of elapsed days for the selected context (trip or all trips).
+    func elapsedDays(from allTrips: [Trip]) -> Int? {
+        if let trip = selectedTrip(from: allTrips) {
+            return tripElapsedDays(trip)
+        }
+        // All-trips mode: span from earliest start to today
+        let starts = trips(from: allTrips).map(\.startDate)
+        guard let earliest = starts.min() else { return nil }
+        let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: earliest), to: Calendar.current.startOfDay(for: .now)).day ?? 0
+        return max(days, 1)
+    }
+
+    func dailyAverage(from allTrips: [Trip]) -> Double? {
+        guard let days = elapsedDays(from: allTrips), days > 0 else { return nil }
+        let total = totalExpenses(from: allTrips)
+        guard total > 0 else { return nil }
+        return total / Double(days)
+    }
+
+    // MARK: - Burn Rate Forecast
+
+    /// Forecasted total spend by end of trip based on current daily average.
+    /// Only meaningful when a single active trip with an end date is selected.
+    func forecastedTotal(from allTrips: [Trip]) -> Double? {
+        guard let trip = selectedTrip(from: allTrips),
+              let endDate = trip.endDate,
+              !trip.isPast,
+              let avg = dailyAverage(from: allTrips) else { return nil }
+        let totalDays = Calendar.current.dateComponents([.day],
+            from: Calendar.current.startOfDay(for: trip.startDate),
+            to: Calendar.current.startOfDay(for: endDate)).day ?? 0
+        guard totalDays > 0 else { return nil }
+        return avg * Double(totalDays)
+    }
+
+    /// Days remaining in the selected trip. Nil if no trip selected or no end date.
+    func daysRemaining(from allTrips: [Trip]) -> Int? {
+        guard let trip = selectedTrip(from: allTrips),
+              let endDate = trip.endDate,
+              !trip.isPast else { return nil }
+        let days = Calendar.current.dateComponents([.day],
+            from: Calendar.current.startOfDay(for: .now),
+            to: Calendar.current.startOfDay(for: endDate)).day ?? 0
+        return max(days, 0)
+    }
+
+    // MARK: - Spending Over Time
+
+    struct DailySpend: Identifiable {
+        let id = UUID()
+        let date: Date
+        let amount: Double
+    }
+
+    /// Returns one DailySpend entry per calendar day that has expenses, for the selected context.
+    func dailySpends(from allTrips: [Trip]) -> [DailySpend] {
+        let expenses = relevantExpenses(from: allTrips)
+        guard !expenses.isEmpty else { return [] }
+        let calendar = Calendar.current
+        var grouped: [Date: Double] = [:]
+        for expense in expenses {
+            let day = calendar.startOfDay(for: expense.createdAt)
+            grouped[day, default: 0] += expense.amount
+        }
+        return grouped
+            .map { DailySpend(date: $0.key, amount: $0.value) }
+            .sorted { $0.date < $1.date }
+    }
+
+    // MARK: - Helpers
+
+    private func tripElapsedDays(_ trip: Trip) -> Int {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: trip.startDate)
+        let today = calendar.startOfDay(for: .now)
+        let end: Date
+        if let tripEnd = trip.endDate, tripEnd < today {
+            end = tripEnd
+        } else {
+            end = today
+        }
+        let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        return max(days, 1)
+    }
+
     func selectTrip(_ trip: Trip) {
         selectedTripID = trip.persistentModelID
     }

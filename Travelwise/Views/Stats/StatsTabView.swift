@@ -68,17 +68,28 @@ struct StatsTabView: View {
                     TotalExpensesCard(
                         totalExpenses: viewModel.totalExpenses(from: allTrips),
                         currencyCode: currencyCode,
-                        subtitle: viewModel.selectedTrip(from: allTrips) == nil ? "Across all trips" : viewModel.selectedTrip(from: allTrips)!.name
+                        subtitle: viewModel.selectedTrip(from: allTrips) == nil ? "Across all trips" : viewModel.selectedTrip(from: allTrips)!.name,
+                        dailyAverage: viewModel.dailyAverage(from: allTrips),
+                        forecastedTotal: viewModel.forecastedTotal(from: allTrips),
+                        daysRemaining: viewModel.daysRemaining(from: allTrips)
                     )
                     .padding(.horizontal)
 
-                    // Pie chart
-                    SpendingPieChart(categoryTotals: viewModel.categoryTotals(from: allTrips))
-                        .padding(.horizontal)
+                    // Category: pie chart + breakdown in one card
+                    SpendingPieChart(
+                        categoryTotals: viewModel.categoryTotals(from: allTrips),
+                        currencyCode: currencyCode
+                    )
+                    .padding(.horizontal)
 
-                    // Category breakdown
-                    CategoryBreakdownList(categoryTotals: viewModel.categoryTotals(from: allTrips), currencyCode: currencyCode)
+                    // Spending over time chart
+                    if !viewModel.dailySpends(from: allTrips).isEmpty {
+                        SpendingOverTimeChart(
+                            dailySpends: viewModel.dailySpends(from: allTrips),
+                            currencyCode: currencyCode
+                        )
                         .padding(.horizontal)
+                    }
 
                     // Expenses grouped by category (when a trip is selected)
                     if viewModel.selectedTrip(from: allTrips) != nil && !viewModel.expensesByCategory(from: allTrips).isEmpty {

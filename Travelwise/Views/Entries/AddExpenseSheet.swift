@@ -12,6 +12,7 @@ struct AddExpenseSheet: View {
     @State private var showingNewCategorySheet = false
     @State private var isEditingCategories = false
     @State private var showingProUpgrade = false
+    @State private var isSaving = false
 
     init(trip: Trip) {
         self.trip = trip
@@ -83,11 +84,20 @@ struct AddExpenseSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        viewModel.saveNewExpense(trip: trip, modelContext: modelContext, firestoreService: firestoreService)
-                        dismiss()
+                    Button {
+                        isSaving = true
+                        Task {
+                            await viewModel.saveNewExpense(trip: trip, modelContext: modelContext, firestoreService: firestoreService)
+                            dismiss()
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("Save")
+                        }
                     }
-                    .disabled(!viewModel.canSave)
+                    .disabled(!viewModel.canSave || isSaving)
                 }
             }
             .task {

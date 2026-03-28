@@ -271,6 +271,15 @@ final class FirestoreService {
 
             try context.save()
             loadedUID = userID
+
+            // Pre-warm exchange rate cache for all synced trips in the background.
+            let homeCurrency = UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD"
+            let tripCurrencies = Set(tripSnapshots.documents.compactMap {
+                $0.data()["currency"] as? String
+            })
+            for currency in tripCurrencies where currency != homeCurrency {
+                ExchangeRateService.shared.warmUp(from: currency, to: homeCurrency)
+            }
             print("[Firestore] Sync complete for \(userID).")
         } catch {
             if !Task.isCancelled {

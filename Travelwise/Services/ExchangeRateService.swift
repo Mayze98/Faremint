@@ -89,6 +89,19 @@ final class ExchangeRateService {
         return rate
     }
 
+    // MARK: - Background warm-up
+
+    /// Silently pre-fetches and caches the rate between `from` and `to` in a background task.
+    /// Safe to call at any time — no-ops if the cache is already fresh.
+    func warmUp(from: String, to: String) {
+        guard from != to else { return }
+        let key = "\(from)→\(to)"
+        if let cached = cache[key], Date().timeIntervalSince(cached.fetchedAt) < maxAge { return }
+        Task.detached(priority: .background) { [weak self] in
+            _ = try? await self?.rate(from: from, to: to)
+        }
+    }
+
     // MARK: - Disk persistence
 
     private func loadCacheFromDisk() {

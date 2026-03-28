@@ -107,23 +107,23 @@ final class ExpenseFormViewModel {
 
     // MARK: - Helpers
 
-    /// Returns the amount in home currency, applying conversion if the user typed in trip currency.
+    /// Returns the amount in home currency, ensuring the rate is fetched if not yet available.
     private func homeAmount() -> Double {
         if inputCurrency == homeCurrency {
             return amountValue
         }
-        // User typed in trip currency — convert to home currency
-        if let rate = exchangeRate {
-            return amountValue * rate
-        }
-        // Rate unavailable — save as-is (best effort)
-        print("[ExchangeRate] Rate unavailable; saving raw amount without conversion.")
-        return amountValue
+        guard let rate = exchangeRate else { return amountValue }
+        return amountValue * rate
     }
 
     // MARK: - Save
 
-    func saveNewExpense(trip: Trip, modelContext: ModelContext, firestoreService: FirestoreService) {
+    /// Ensures the exchange rate is loaded, then saves the expense.
+    func saveNewExpense(trip: Trip, modelContext: ModelContext, firestoreService: FirestoreService) async {
+        // Block save until rate is available
+        if needsConversion && inputCurrency != homeCurrency && exchangeRate == nil {
+            await fetchExchangeRate()
+        }
         let converted = homeAmount()
         let expense = Expense(
             title: title.trimmingCharacters(in: .whitespaces),
@@ -144,8 +144,12 @@ final class ExpenseFormViewModel {
         NotificationService.shared.checkBudgetThresholds(for: trip, pendingAmount: converted, pendingCategory: selectedCategory)
     }
 
-    func updateExpense(firestoreService: FirestoreService) {
+    /// Ensures the exchange rate is loaded, then updates the expense.
+    func updateExpense(firestoreService: FirestoreService) async {
         guard let expense = existingExpense else { return }
+        if needsConversion && inputCurrency != homeCurrency && exchangeRate == nil {
+            await fetchExchangeRate()
+        }
         let converted = homeAmount()
         expense.title = title.trimmingCharacters(in: .whitespaces)
         expense.originalAmount = converted

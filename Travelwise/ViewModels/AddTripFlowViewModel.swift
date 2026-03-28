@@ -482,5 +482,7 @@ final class AddTripFlowViewModel {
         )
         modelContext.insert(trip)
         firestoreService.saveTrip(trip)
+        // Pre-warm the exchange rate cache so it's ready when the user adds expenses.
+        ExchangeRateService.shared.warmUp(from: tripCurrency, to: homeCurrency)
     }
 }

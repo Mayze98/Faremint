@@ -1,8 +1,10 @@
 import SwiftUI
+import FirebaseAuth
 
 struct LoginView: View {
     @Environment(AuthService.self) private var authService
     @State private var viewModel = AuthViewModel()
+    @State private var showingForgotPassword = false
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -90,6 +92,19 @@ struct LoginView: View {
                                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                         }
 
+                        // Forgot password (sign-in only)
+                        if !viewModel.isSignUp {
+                            HStack {
+                                Spacer()
+                                Button("Forgot Password?") {
+                                    showingForgotPassword = true
+                                }
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Theme.accentTeal)
+                            }
+                            .transition(.opacity)
+                        }
+
                         // Confirm password (sign-up only)
                         if viewModel.isSignUp {
                             VStack(alignment: .leading, spacing: 6) {
@@ -170,6 +185,9 @@ struct LoginView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.isSignUp)
         .animation(.easeInOut(duration: 0.3), value: viewModel.errorMessage)
+        .sheet(isPresented: $showingForgotPassword) {
+            ForgotPasswordSheet(prefillEmail: viewModel.email)
+        }
     }
 
     private func formField(label: String, placeholder: String, text: Binding<String>, field: Field) -> some View {
@@ -182,6 +200,95 @@ struct LoginView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+// MARK: - Forgot Password Sheet
+
+private struct ForgotPasswordSheet: View {
+    @Environment(AuthService.self) private var authService
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var email: String
+    @State private var isSending = false
+    @State private var sent = false
+    @State private var errorMessage: String?
+
+    init(prefillEmail: String) {
+        _email = State(initialValue: prefillEmail)
+    }
+
+    private var canSend: Bool {
+        !email.trimmingCharacters(in: .whitespaces).isEmpty && !isSending && !sent
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Email address", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .disabled(sent)
+                } footer: {
+                    if sent {
+                        Label("Reset link sent! Check your inbox.", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.caption)
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                    } else {
+                        Text("We'll send a password reset link to this address.")
+                            .font(.caption)
+                    }
+                }
+            }
+            .navigationTitle("Forgot Password")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        sendReset()
+                    } label: {
+                        if isSending {
+                            ProgressView()
+                        } else {
+                            Text("Send")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .disabled(!canSend)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func sendReset() {
+        isSending = true
+        errorMessage = nil
+        Task {
+            do {
+                try await authService.sendPasswordReset(to: email.trimmingCharacters(in: .whitespaces))
+            } catch let nsError as NSError
+                where nsError.domain == AuthErrorDomain &&
+                      AuthErrorCode(rawValue: nsError.code) == .userNotFound {
+                // Silently succeed — don't reveal whether the email is registered
+            } catch {
+                errorMessage = AuthService.friendlyErrorMessage(for: error)
+                isSending = false
+                return
+            }
+            sent = true
+            isSending = false
         }
     }
 }

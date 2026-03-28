@@ -13,6 +13,7 @@ struct EditExpenseSheet: View {
     @State private var showingNewCategorySheet = false
     @State private var isEditingCategories = false
     @State private var showingProUpgrade = false
+    @State private var isSaving = false
 
     init(expense: Expense, categories: [ExpenseCategory], currencyCode: String) {
         self.expense = expense
@@ -88,11 +89,20 @@ struct EditExpenseSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        viewModel.updateExpense(firestoreService: firestoreService)
-                        dismiss()
+                    Button {
+                        isSaving = true
+                        Task {
+                            await viewModel.updateExpense(firestoreService: firestoreService)
+                            dismiss()
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("Save")
+                        }
                     }
-                    .disabled(!viewModel.canSave)
+                    .disabled(!viewModel.canSave || isSaving)
                 }
             }
             .task {

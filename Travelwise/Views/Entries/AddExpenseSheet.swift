@@ -74,7 +74,6 @@ struct AddExpenseSheet: View {
                             }
                         }
                     }
-                    .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
                 }
             }
             .navigationTitle("New Expense")
@@ -103,6 +102,7 @@ struct AddExpenseSheet: View {
             .task {
                 await viewModel.fetchExchangeRate()
             }
+            .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
         }
     }
 

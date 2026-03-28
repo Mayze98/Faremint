@@ -116,59 +116,6 @@ struct SettingsTabView: View {
                         }
                         .tint(.primary)
                         Divider()
-                        if let url = CSVExporter.csvFileURL(for: trips) {
-                            ShareLink(item: url, preview: SharePreview("Travelwise Export", image: Image(systemName: "doc.text"))) {
-                                SettingsRowView(
-                                    icon: "arrow.down.circle",
-                                    iconColor: .blue,
-                                    title: "Export Data",
-                                    subtitle: "Download your trips as CSV"
-                                )
-                            }
-                            .tint(.primary)
-                        } else {
-                            SettingsRowView(
-                                icon: "arrow.down.circle",
-                                iconColor: .blue,
-                                title: "Export Data",
-                                subtitle: "Download your trips as CSV"
-                            )
-                        }
-                        Divider()
-                        if storeKitService.isProUser {
-                            if let pdfURL = PDFExporter.pdfFileURL(for: trips, currencyCode: currencyCode) {
-                                ShareLink(item: pdfURL, preview: SharePreview("PDF Summary", image: Image(systemName: "doc.richtext"))) {
-                                    SettingsRowView(
-                                        icon: "doc.richtext",
-                                        iconColor: .orange,
-                                        title: "Export PDF Summary",
-                                        subtitle: "Trip summaries with category charts"
-                                    )
-                                }
-                                .tint(.primary)
-                                Divider()
-                                ShareLink(item: pdfURL, preview: SharePreview("Tax Report", image: Image(systemName: "doc.text.magnifyingglass"))) {
-                                    SettingsRowView(
-                                        icon: "doc.text.magnifyingglass",
-                                        iconColor: .green,
-                                        title: "Export Tax Report",
-                                        subtitle: "Chronological expense list for tax filing"
-                                    )
-                                }
-                                .tint(.primary)
-                            }
-                        } else {
-                            Button { showingProUpgrade = true } label: {
-                                SettingsRowView(
-                                    icon: "doc.richtext",
-                                    iconColor: .orange,
-                                    title: "PDF & Tax Reports",
-                                    subtitle: "Pro — Upgrade to unlock"
-                                )
-                            }
-                            .tint(.primary)
-                        }
-                        Divider()
                         HStack(spacing: 14) {
                             Image(systemName: appearanceMode == 2 ? "moon.fill" : "sun.max.fill")
                                 .font(.system(size: 14, weight: .semibold))
@@ -196,6 +143,64 @@ struct SettingsTabView: View {
                             .frame(width: 120)
                         }
                         .padding(.vertical, 8)
+                    }
+
+                    // Export section
+                    SettingsSection(title: "EXPORT DATA") {
+                        if storeKitService.isProUser {
+                            let csvURL = CSVExporter.csvFileURL(for: trips)
+                            let pdfURL = PDFExporter.pdfFileURL(for: trips, currencyCode: currencyCode)
+                            if let url = csvURL {
+                                ShareLink(item: url, preview: SharePreview("Travelwise Export", image: Image(systemName: "doc.text"))) {
+                                    SettingsRowView(
+                                        icon: "arrow.down.circle",
+                                        iconColor: .blue,
+                                        title: "Export CSV",
+                                        subtitle: "Download your trips as CSV"
+                                    )
+                                }
+                                .tint(.primary)
+                            } else {
+                                SettingsRowView(
+                                    icon: "arrow.down.circle",
+                                    iconColor: .blue,
+                                    title: "Export CSV",
+                                    subtitle: "Download your trips as CSV"
+                                )
+                            }
+                            if let url = pdfURL {
+                                Divider()
+                                ShareLink(item: url, preview: SharePreview("PDF Summary", image: Image(systemName: "doc.richtext"))) {
+                                    SettingsRowView(
+                                        icon: "doc.richtext",
+                                        iconColor: .orange,
+                                        title: "Export PDF Summary",
+                                        subtitle: "Trip summaries with category charts"
+                                    )
+                                }
+                                .tint(.primary)
+                                Divider()
+                                ShareLink(item: url, preview: SharePreview("Tax Report", image: Image(systemName: "doc.text.magnifyingglass"))) {
+                                    SettingsRowView(
+                                        icon: "doc.text.magnifyingglass",
+                                        iconColor: .green,
+                                        title: "Export Tax Report",
+                                        subtitle: "Chronological expense list for tax filing"
+                                    )
+                                }
+                                .tint(.primary)
+                            }
+                        } else {
+                            Button { showingProUpgrade = true } label: {
+                                SettingsRowView(
+                                    icon: "arrow.up.doc",
+                                    iconColor: .blue,
+                                    title: "CSV, PDF & Tax Reports",
+                                    subtitle: "Pro — Upgrade to unlock"
+                                )
+                            }
+                            .tint(.primary)
+                        }
                     }
 
                     // Sign Out

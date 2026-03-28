@@ -6,8 +6,10 @@ struct EntriesTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
     @Environment(\.modelContext) private var modelContext
     @Environment(AuthService.self) private var authService
+    @Environment(StoreKitService.self) private var storeKitService
     @State private var viewModel = EntriesViewModel()
     @State private var showingPastTrips = false
+    @State private var showingProUpgrade = false
 
     var body: some View {
         NavigationStack {
@@ -24,8 +26,12 @@ struct EntriesTabView: View {
                     Spacer()
                     HStack(spacing: 8) {
                         Button {
-                            withAnimation(.easeInOut(duration: 0.35)) {
-                                viewModel.showingAddTrip = true
+                            if storeKitService.canAddTrip(currentTripCount: allTrips.count) {
+                                withAnimation(.easeInOut(duration: 0.35)) {
+                                    viewModel.showingAddTrip = true
+                                }
+                            } else {
+                                showingProUpgrade = true
                             }
                         } label: {
                             Image(systemName: "airplane.departure")
@@ -127,7 +133,13 @@ struct EntriesTabView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 Button {
-                    viewModel.handleFABTap(allTrips: allTrips)
+                    // If tapping FAB would open the add trip flow, check limit first
+                    let activeTrips = viewModel.trips(from: allTrips)
+                    if activeTrips.isEmpty && !storeKitService.canAddTrip(currentTripCount: allTrips.count) {
+                        showingProUpgrade = true
+                    } else {
+                        viewModel.handleFABTap(allTrips: allTrips)
+                    }
                 } label: {
                     Image(systemName: "plus")
                         .font(.title2.weight(.semibold))
@@ -158,6 +170,9 @@ struct EntriesTabView: View {
             }
             .sheet(isPresented: $showingPastTrips) {
                 PastTripsTabView()
+            }
+            .sheet(isPresented: $showingProUpgrade) {
+                ProUpgradeView()
             }
         }
     }

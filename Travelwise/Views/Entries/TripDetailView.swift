@@ -6,6 +6,7 @@ struct TripDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
+    @Environment(StoreKitService.self) private var storeKitService
     @AppStorage("currencyCode") private var homeCurrency = "CAD"
     @State private var showingAddExpense = false
     @State private var showingMoveToPast = false
@@ -55,7 +56,7 @@ struct TripDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 16) {
-                    if let url = CSVExporter.csvFileURL(for: trip) {
+                    if storeKitService.isProUser, let url = CSVExporter.csvFileURL(for: trip) {
                         ShareLink(item: url, preview: SharePreview("Export \(trip.name)", image: Image(systemName: "doc.text"))) {
                             Image(systemName: "square.and.arrow.up")
                         }
@@ -232,4 +233,5 @@ struct TripDetailView: View {
     }
     .modelContainer(SampleData.container)
     .environment(FirestoreService())
+    .environment(StoreKitService())
 }

@@ -32,6 +32,12 @@ struct ProUpgradeView: View {
                     // Feature list
                     VStack(spacing: 0) {
                         proFeatureRow(
+                            icon: "infinity", color: .indigo,
+                            title: "Unlimited Trips",
+                            subtitle: "Free plan is limited to \(StoreKitService.freeTripsLimit) trips"
+                        )
+                        Divider().padding(.leading, 62)
+                        proFeatureRow(
                             icon: "map.fill", color: .blue,
                             title: "Expense Map",
                             subtitle: "See all your expenses pinned on a world map"

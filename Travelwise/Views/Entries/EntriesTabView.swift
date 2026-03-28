@@ -119,6 +119,12 @@ struct EntriesTabView: View {
             .onChange(of: authService.currentUser?.uid) { _, _ in
                 viewModel.reset()
             }
+            .onChange(of: allTrips) { _, trips in
+                warmUpRates(for: trips)
+            }
+            .onAppear {
+                warmUpRates(for: allTrips)
+            }
             .overlay(alignment: .bottomTrailing) {
                 Button {
                     viewModel.handleFABTap(allTrips: allTrips)
@@ -153,6 +159,14 @@ struct EntriesTabView: View {
             .sheet(isPresented: $showingPastTrips) {
                 PastTripsTabView()
             }
+        }
+    }
+
+    private func warmUpRates(for trips: [Trip]) {
+        let homeCurrency = UserDefaults.standard.string(forKey: "currencyCode") ?? "CAD"
+        let uniqueCurrencies = Set(trips.map(\.currency))
+        for currency in uniqueCurrencies where currency != homeCurrency {
+            ExchangeRateService.shared.warmUp(from: currency, to: homeCurrency)
         }
     }
 }

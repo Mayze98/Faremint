@@ -56,6 +56,66 @@ struct EntriesTabView: View {
                 .padding(.horizontal)
                 .padding(.top)
 
+                // Trip limit nudge — show when at the limit (on last free trip)
+                if !storeKitService.isProUser && allTrips.count >= StoreKitService.freeTripsLimit {
+                    Button { showingProUpgrade = true } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "crown.fill")
+                                .font(.caption)
+                                .foregroundStyle(.yellow)
+                            Text("You've used all \(StoreKitService.freeTripsLimit) free trips. Upgrade for unlimited.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("PRO")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Theme.accentTeal, in: Capsule())
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                } else if !storeKitService.isProUser && allTrips.count == StoreKitService.freeTripsLimit - 1 {
+                    Button { showingProUpgrade = true } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .font(.caption)
+                                .foregroundStyle(Theme.accentTeal)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("1 free trip remaining")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                Text("Go Pro for unlimited trips, maps & exports")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Theme.accentTeal.opacity(0.08))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Theme.accentTeal.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                }
+
                 if viewModel.trips(from: allTrips).isEmpty {
                     Spacer()
                     VStack(spacing: 16) {

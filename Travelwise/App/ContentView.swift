@@ -4,6 +4,8 @@ import SwiftData
 struct ContentView: View {
     @Environment(AuthService.self) private var authService
     @AppStorage("appearanceMode") private var appearanceMode = 0 // 0 = system, 1 = light, 2 = dark
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showingOnboarding = false
 
     var body: some View {
         Group {
@@ -38,6 +40,15 @@ struct ContentView: View {
         }
         .fontDesign(.rounded)
         .preferredColorScheme(appearanceMode == 1 ? .light : appearanceMode == 2 ? .dark : nil)
+        .onChange(of: authService.isAuthenticated) { _, isAuth in
+            if isAuth && !hasSeenOnboarding {
+                showingOnboarding = true
+                hasSeenOnboarding = true
+            }
+        }
+        .sheet(isPresented: $showingOnboarding) {
+            OnboardingView()
+        }
     }
 }
 

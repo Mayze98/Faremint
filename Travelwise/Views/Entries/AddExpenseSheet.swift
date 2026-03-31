@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import StoreKit
 
 struct AddExpenseSheet: View {
     let trip: Trip
@@ -13,6 +14,8 @@ struct AddExpenseSheet: View {
     @State private var isEditingCategories = false
     @State private var showingProUpgrade = false
     @State private var isSaving = false
+    @AppStorage("totalExpensesSaved") private var totalExpensesSaved = 0
+    @Environment(\.requestReview) private var requestReview
 
     init(trip: Trip) {
         self.trip = trip
@@ -45,34 +48,42 @@ struct AddExpenseSheet: View {
                         longitude: $viewModel.longitude
                     )
                 } else {
-                    Section("Location") {
+                    Section {
                         Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.accentTeal)
-                                Text("Pro feature — Upgrade to tag location")
+                            HStack(spacing: 12) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                Text("Add location")
                                     .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.tertiary)
+                                Spacer()
+                                proBadge
                             }
                         }
+                    } header: {
+                        Text("Location")
                     }
                 }
 
                 if storeKitService.isProUser {
                     PhotoPickerSection(imageData: $viewModel.photoData)
                 } else {
-                    Section("Picture") {
+                    Section {
                         Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.accentTeal)
-                                Text("Pro feature — Upgrade to add photos")
+                            HStack(spacing: 12) {
+                                Image(systemName: "camera.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                Text("Add photo")
                                     .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.tertiary)
+                                Spacer()
+                                proBadge
                             }
                         }
+                    } header: {
+                        Text("Picture")
                     }
                 }
             }
@@ -87,6 +98,10 @@ struct AddExpenseSheet: View {
                         isSaving = true
                         Task {
                             await viewModel.saveNewExpense(trip: trip, modelContext: modelContext, firestoreService: firestoreService)
+                            totalExpensesSaved += 1
+                            if totalExpensesSaved == 10 {
+                                requestReview()
+                            }
                             dismiss()
                         }
                     } label: {
@@ -104,6 +119,15 @@ struct AddExpenseSheet: View {
             }
             .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
         }
+    }
+
+    private var proBadge: some View {
+        Text("PRO")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Theme.accentTeal, in: Capsule())
     }
 
     // MARK: - Amount Section

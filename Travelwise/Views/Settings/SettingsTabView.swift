@@ -192,12 +192,48 @@ struct SettingsTabView: View {
                             }
                         } else {
                             Button { showingProUpgrade = true } label: {
-                                SettingsRowView(
-                                    icon: "arrow.up.doc",
-                                    iconColor: .blue,
-                                    title: "CSV, PDF & Tax Reports",
-                                    subtitle: "Pro — Upgrade to unlock"
-                                )
+                                VStack(spacing: 0) {
+                                    // Blurred preview of actual export rows
+                                    VStack(spacing: 0) {
+                                        SettingsRowView(
+                                            icon: "arrow.down.circle",
+                                            iconColor: .blue,
+                                            title: "Export CSV",
+                                            subtitle: "Download your trips as CSV"
+                                        )
+                                        Divider()
+                                        SettingsRowView(
+                                            icon: "doc.richtext",
+                                            iconColor: .orange,
+                                            title: "Export PDF Summary",
+                                            subtitle: "Trip summaries with category charts"
+                                        )
+                                        Divider()
+                                        SettingsRowView(
+                                            icon: "doc.text.magnifyingglass",
+                                            iconColor: .green,
+                                            title: "Export Tax Report",
+                                            subtitle: "Chronological expense list for tax filing"
+                                        )
+                                    }
+                                    .blur(radius: 4)
+                                    .allowsHitTesting(false)
+
+                                    // Upgrade overlay
+                                    VStack(spacing: 6) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "lock.fill")
+                                                .font(.caption.weight(.semibold))
+                                            Text("Upgrade to Pro")
+                                                .font(.subheadline.weight(.semibold))
+                                        }
+                                        .foregroundStyle(Theme.accentTeal)
+                                        Text("Export your trips as CSV, PDF & tax reports")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.vertical, 10)
+                                }
                             }
                             .tint(.primary)
                         }

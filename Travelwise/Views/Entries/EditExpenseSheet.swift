@@ -49,17 +49,21 @@ struct EditExpenseSheet: View {
                         longitude: $viewModel.longitude
                     )
                 } else {
-                    Section("Location") {
+                    Section {
                         Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.accentTeal)
-                                Text("Pro feature — Upgrade to tag location")
+                            HStack(spacing: 12) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                Text("Add location")
                                     .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.tertiary)
+                                Spacer()
+                                proBadge
                             }
                         }
+                    } header: {
+                        Text("Location")
                     }
                 }
 
@@ -67,17 +71,21 @@ struct EditExpenseSheet: View {
                 if storeKitService.isProUser || viewModel.photoData != nil {
                     PhotoPickerSection(imageData: $viewModel.photoData)
                 } else {
-                    Section("Picture") {
+                    Section {
                         Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.accentTeal)
-                                Text("Pro feature — Upgrade to add photos")
+                            HStack(spacing: 12) {
+                                Image(systemName: "camera.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                                Text("Add photo")
                                     .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.tertiary)
+                                Spacer()
+                                proBadge
                             }
                         }
+                    } header: {
+                        Text("Picture")
                     }
                 }
             }
@@ -109,6 +117,15 @@ struct EditExpenseSheet: View {
             }
             .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
         }
+    }
+
+    private var proBadge: some View {
+        Text("PRO")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Theme.accentTeal, in: Capsule())
     }
 
     // MARK: - Amount Section

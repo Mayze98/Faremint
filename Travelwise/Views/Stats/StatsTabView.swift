@@ -3,9 +3,11 @@ import SwiftData
 
 struct StatsTabView: View {
     @Query(sort: \Trip.createdAt, order: .reverse) private var allTrips: [Trip]
+    @Environment(StoreKitService.self) private var storeKitService
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var viewModel = StatsViewModel()
     @State private var showingPastTrips = false
+    @State private var showingProUpgrade = false
 
     private var currentYear: Int {
         Calendar.current.component(.year, from: .now)
@@ -64,29 +66,41 @@ struct StatsTabView: View {
                         .scrollIndicators(.hidden)
                     }
 
-                    // Total expenses card
+                    // Total expenses card — daily avg & forecast are Pro
                     TotalExpensesCard(
                         totalExpenses: viewModel.totalExpenses(from: allTrips),
                         currencyCode: currencyCode,
                         subtitle: viewModel.selectedTrip(from: allTrips) == nil ? "Across all trips" : viewModel.selectedTrip(from: allTrips)!.name,
-                        dailyAverage: viewModel.dailyAverage(from: allTrips),
-                        forecastedTotal: viewModel.forecastedTotal(from: allTrips),
-                        daysRemaining: viewModel.daysRemaining(from: allTrips)
+                        dailyAverage: storeKitService.isProUser ? viewModel.dailyAverage(from: allTrips) : nil,
+                        forecastedTotal: storeKitService.isProUser ? viewModel.forecastedTotal(from: allTrips) : nil,
+                        daysRemaining: storeKitService.isProUser ? viewModel.daysRemaining(from: allTrips) : nil
                     )
                     .padding(.horizontal)
 
                     // Category: pie chart + breakdown in one card
                     SpendingPieChart(
                         categoryTotals: viewModel.categoryTotals(from: allTrips),
-                        currencyCode: currencyCode
+                        currencyCode: currencyCode,
+                        isProUser: storeKitService.isProUser,
+                        onUpgradeTapped: { showingProUpgrade = true }
                     )
                     .padding(.horizontal)
 
-                    // Spending over time chart
-                    if !viewModel.dailySpends(from: allTrips).isEmpty {
-                        SpendingOverTimeChart(
-                            dailySpends: viewModel.dailySpends(from: allTrips),
-                            currencyCode: currencyCode
+                    // Spending over time chart — Pro only
+                    if storeKitService.isProUser {
+                        if !viewModel.dailySpends(from: allTrips).isEmpty {
+                            SpendingOverTimeChart(
+                                dailySpends: viewModel.dailySpends(from: allTrips),
+                                currencyCode: currencyCode
+                            )
+                            .padding(.horizontal)
+                        }
+                    } else {
+                        // Locked spending over time placeholder
+                        proLockedCard(
+                            title: "Spending Over Time",
+                            icon: "chart.xyaxis.line",
+                            description: "Track daily and cumulative spending trends"
                         )
                         .padding(.horizontal)
                     }
@@ -104,7 +118,50 @@ struct StatsTabView: View {
             .sheet(isPresented: $showingPastTrips) {
                 StatsPastTripsSheet()
             }
+            .sheet(isPresented: $showingProUpgrade) {
+                ProUpgradeView()
+            }
         }
+    }
+
+    private func proLockedCard(title: String, icon: String, description: String) -> some View {
+        Button { showingProUpgrade = true } label: {
+            VStack(spacing: 12) {
+                HStack {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                        Text("PRO")
+                            .font(.caption2.weight(.bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.accentTeal, in: Capsule())
+                }
+
+                HStack(spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.system(size: 28))
+                        .foregroundStyle(Theme.accentTeal.opacity(0.5))
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding()
+            .background(.background, in: RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
     }
 
     private var expenseListSection: some View {
@@ -189,4 +246,5 @@ struct TripFilterChip: View {
 #Preview {
     StatsTabView()
         .modelContainer(SampleData.container)
+        .environment(StoreKitService())
 }

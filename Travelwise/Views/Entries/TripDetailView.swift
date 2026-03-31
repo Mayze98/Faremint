@@ -12,6 +12,8 @@ struct TripDetailView: View {
     @State private var showingMoveToPast = false
     @State private var showingDeleteTrip = false
     @State private var showingEditTrip = false
+    @State private var shareSummaryImage: UIImage?
+    @State private var showingShareSheet = false
 
     @State private var viewModel: TripDetailViewModel
 
@@ -72,6 +74,23 @@ struct TripDetailView: View {
                         } label: {
                             Label("Edit Trip", systemImage: "pencil")
                         }
+                        Button {
+                            let topCat = expensesByCategory.first?.category
+                            shareSummaryImage = TripSummaryCard.renderImage(
+                                tripName: trip.name,
+                                startDate: trip.startDate,
+                                endDate: trip.endDate,
+                                totalSpent: totalSpent,
+                                budget: trip.budget,
+                                expenseCount: expenses.count,
+                                topCategory: topCat,
+                                currencyCode: homeCurrency,
+                                colorHex: trip.colorHex
+                            )
+                            showingShareSheet = true
+                        } label: {
+                            Label("Share Trip Summary", systemImage: "square.and.arrow.up")
+                        }
                         if !trip.isPast {
                             Button {
                                 showingMoveToPast = true
@@ -113,6 +132,11 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $showingEditTrip) {
             EditTripSheet(trip: trip)
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            if let image = shareSummaryImage {
+                ShareSheetView(items: [image])
+            }
         }
     }
 

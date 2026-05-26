@@ -12,6 +12,7 @@ struct AddTripFlowView: View {
     @State private var showingNewCategorySheet = false
     @State private var showingStartDatePicker = false
     @State private var showingEndDatePicker = false
+    @State private var isSaving = false
 
     init(isPresented: Binding<Bool>) {
         _isPresented = isPresented
@@ -684,6 +685,8 @@ struct AddTripFlowView: View {
     private func handleNext() {
         withAnimation(.easeInOut(duration: 0.35)) {
             if viewModel.handleNext() {
+                guard !isSaving else { return }
+                isSaving = true
                 viewModel.saveTrip(modelContext: modelContext, firestoreService: firestoreService)
                 isPresented = false
             }

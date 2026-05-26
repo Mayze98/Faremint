@@ -17,6 +17,8 @@ struct ContentView: View {
                     ProgressView()
                         .tint(Theme.accentTeal)
                 }
+            } else if authService.isAuthenticated && !authService.isEmailVerified {
+                EmailVerificationView()
             } else if authService.isAuthenticated {
                 TabView {
                     Tab("Entries", systemImage: "list.bullet.rectangle.portrait") {
@@ -40,8 +42,8 @@ struct ContentView: View {
         }
         .fontDesign(.rounded)
         .preferredColorScheme(appearanceMode == 1 ? .light : appearanceMode == 2 ? .dark : nil)
-        .onChange(of: authService.isAuthenticated) { _, isAuth in
-            if isAuth && !hasSeenOnboarding {
+        .onChange(of: authService.isEmailVerified) { _, verified in
+            if verified && !hasSeenOnboarding {
                 showingOnboarding = true
                 hasSeenOnboarding = true
             }

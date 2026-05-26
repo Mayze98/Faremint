@@ -74,8 +74,11 @@ struct NewCategorySheet: View {
                 Section("Name") {
                     TextField("Category name", text: $name)
                         .textInputAutocapitalization(.words)
-                        .onChange(of: name) { _, _ in
+                        .onChange(of: name) { _, newValue in
                             showDuplicateError = false
+                            if newValue.count > AddTripFlowViewModel.maxCategoryNameLength {
+                                name = String(newValue.prefix(AddTripFlowViewModel.maxCategoryNameLength))
+                            }
                         }
 
                     if showDuplicateError && isDuplicate {

@@ -42,7 +42,7 @@ enum CSVExporter {
 
     static func csvFileURL(for trip: Trip) -> URL? {
         let csv = generateCSV(for: trip)
-        let sanitizedName = trip.name.replacingOccurrences(of: "/", with: "-")
+        let sanitizedName = sanitizeFilename(trip.name)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(sanitizedName)-expenses.csv")
         do {
@@ -70,5 +70,18 @@ enum CSVExporter {
             return "\"" + string.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
         return string
+    }
+
+    /// Strips filesystem-unsafe characters and limits length for safe filenames.
+    private static func sanitizeFilename(_ name: String) -> String {
+        let cleaned = name.unicodeScalars.filter { scalar in
+            CharacterSet.alphanumerics.contains(scalar)
+            || scalar == " " || scalar == "-" || scalar == "_"
+        }
+        let result = String(String.UnicodeScalarView(cleaned))
+            .trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: " ", with: "-")
+        let truncated = String(result.prefix(60))
+        return truncated.isEmpty ? "export" : truncated
     }
 }

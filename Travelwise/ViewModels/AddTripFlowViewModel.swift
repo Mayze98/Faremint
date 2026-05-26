@@ -9,6 +9,12 @@ struct MustSpendItem: Identifiable, Hashable {
 
 @Observable
 final class AddTripFlowViewModel {
+    // MARK: - Input Limits
+
+    static let maxNameLength = 60
+    static let maxBudget = 10_000_000.0
+    static let maxCategoryNameLength = 40
+
     var step = 0
     var name = ""
     var budget = ""
@@ -256,7 +262,8 @@ final class AddTripFlowViewModel {
     }
 
     var budgetValue: Double {
-        Double(budget) ?? 0
+        let parsed = Double(budget) ?? 0
+        return min(max(parsed, 0), Self.maxBudget)
     }
 
     var mustSpendTotal: Double {
@@ -471,8 +478,9 @@ final class AddTripFlowViewModel {
             ExpenseCategory(customName: $0.name, systemImage: $0.systemImage, budgetLimit: limitValue(for: $0.name))
         }
         let allCategories = baseCategories + customWithLimits
+        let clampedName = String(name.trimmingCharacters(in: .whitespaces).prefix(Self.maxNameLength))
         let trip = Trip(
-            name: name.trimmingCharacters(in: .whitespaces),
+            name: clampedName,
             budget: budgetValue,
             currency: tripCurrency,
             startDate: startDate,

@@ -37,7 +37,7 @@ struct SettingsTabView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Pro Active")
                                         .font(.subheadline.weight(.medium))
-                                    Text(storeKitService.isSuperuser ? "Developer access" : "Subscription active")
+                                    Text("Subscription active")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -255,7 +255,7 @@ struct SettingsTabView: View {
                     .padding(.horizontal)
 
                     // Version
-                    Text("Travelwise v1.0.0")
+                    Text("Travelwise v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)

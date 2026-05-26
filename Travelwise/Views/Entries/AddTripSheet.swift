@@ -15,6 +15,7 @@ struct AddTripSheet: View {
     @State private var customCategories: [ExpenseCategory] = []
     @State private var showingNewCategorySheet = false
     @State private var categoryLimits: [String: String] = [:]
+    @State private var isSaving = false
 
     private var budgetValue: Double {
         Double(budget) ?? 0
@@ -168,9 +169,11 @@ struct AddTripSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
+                        guard !isSaving else { return }
+                        isSaving = true
                         saveTrip()
                     }
-                    .disabled(!canSave)
+                    .disabled(!canSave || isSaving)
                 }
             }
         }

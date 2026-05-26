@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Default: deny all access.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Users can only access their own photos.
+    match /users/{userId}/expenses/{expenseId}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Limit uploads to 10 MB and image content types.
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId
+                            && request.resource.size < 10 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

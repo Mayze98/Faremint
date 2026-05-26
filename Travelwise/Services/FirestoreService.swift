@@ -22,6 +22,9 @@ final class FirestoreService {
     var isSyncing = false
     /// Non-nil if the last sync attempt produced an error.
     var syncError: Error?
+    /// Non-nil when a background write (trip or expense save) fails.
+    /// Views can observe this to show an alert or banner.
+    var lastWriteError: String?
 
     /// UID of the user whose data is currently loaded in SwiftData.
     /// Used to detect account switches, including on app launch.
@@ -96,9 +99,12 @@ final class FirestoreService {
         let data = trip.toFirestoreData()
         tripsCollection(for: userID)
             .document(trip.firestoreID)
-            .setData(data, merge: true) { error in
+            .setData(data, merge: true) { [weak self] error in
                 if let error {
                     print("[Firestore] Failed to save trip \(trip.firestoreID): \(error)")
+                    Task { @MainActor in
+                        self?.lastWriteError = "Failed to sync trip. Changes saved locally."
+                    }
                 }
             }
     }
@@ -166,6 +172,9 @@ final class FirestoreService {
                     .setData(data, merge: true)
             } catch {
                 print("[Firestore] Failed to save expense \(expenseID): \(error)")
+                await MainActor.run {
+                    self.lastWriteError = "Failed to sync expense. Changes saved locally."
+                }
             }
         }
     }
@@ -184,6 +193,37 @@ final class FirestoreService {
                 print("[Firestore] Failed to delete expense \(firestoreID): \(error)")
             }
         }
+    }
+
+    // MARK: - Delete all remote data for account deletion
+
+    /// Deletes all Firestore documents and Storage photos for the given user.
+    /// Call this before deleting the Firebase Auth account to comply with
+    /// privacy requirements (GDPR, App Store guidelines).
+    func deleteAllUserData(userID: String) async throws {
+        let tripsSnapshot = try await tripsCollection(for: userID).getDocuments()
+
+        for tripDoc in tripsSnapshot.documents {
+            // Delete all expenses (and their photos) in each trip.
+            let expSnapshot = try await expensesCollection(
+                tripID: tripDoc.documentID,
+                userID: userID
+            ).getDocuments()
+
+            for expDoc in expSnapshot.documents {
+                // Clean up Storage photo if present.
+                if let photoURL = expDoc.data()["photoURL"] as? String, !photoURL.isEmpty {
+                    deletePhoto(expenseID: expDoc.documentID, userID: userID, photoURL: photoURL)
+                }
+                try await expDoc.reference.delete()
+            }
+
+            // Delete the trip document itself.
+            try await tripDoc.reference.delete()
+        }
+
+        // Delete the user's root document (if it exists).
+        try await db.collection("users").document(userID).delete()
     }
 
     // MARK: - Clear local data on sign-out

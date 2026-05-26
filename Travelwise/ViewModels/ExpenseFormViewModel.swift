@@ -84,8 +84,15 @@ final class ExpenseFormViewModel {
 
     // MARK: - Computed
 
+    // MARK: - Input Limits
+
+    static let maxTitleLength = 100
+    static let maxNoteLength = 500
+    static let maxAmount = 1_000_000.0
+
     var amountValue: Double {
-        Double(amount) ?? 0
+        let parsed = Double(amount) ?? 0
+        return min(max(parsed, 0), Self.maxAmount)
     }
 
     var canSave: Bool {
@@ -125,13 +132,15 @@ final class ExpenseFormViewModel {
             await fetchExchangeRate()
         }
         let converted = homeAmount()
+        let clampedTitle = String(title.trimmingCharacters(in: .whitespaces).prefix(Self.maxTitleLength))
+        let clampedNote = String(note.trimmingCharacters(in: .whitespaces).prefix(Self.maxNoteLength))
         let expense = Expense(
-            title: title.trimmingCharacters(in: .whitespaces),
+            title: clampedTitle,
             amount: converted,
             originalAmount: converted,
             splitPercent: nil,
             categoryName: selectedCategory,
-            note: note.trimmingCharacters(in: .whitespaces),
+            note: clampedNote,
             photoData: photoData,
             latitude: latitude,
             longitude: longitude,
@@ -151,12 +160,12 @@ final class ExpenseFormViewModel {
             await fetchExchangeRate()
         }
         let converted = homeAmount()
-        expense.title = title.trimmingCharacters(in: .whitespaces)
+        expense.title = String(title.trimmingCharacters(in: .whitespaces).prefix(Self.maxTitleLength))
         expense.originalAmount = converted
         expense.amount = converted
         expense.splitPercent = nil
         expense.categoryName = selectedCategory
-        expense.note = note.trimmingCharacters(in: .whitespaces)
+        expense.note = String(note.trimmingCharacters(in: .whitespaces).prefix(Self.maxNoteLength))
         expense.photoData = photoData
         expense.latitude = latitude
         expense.longitude = longitude

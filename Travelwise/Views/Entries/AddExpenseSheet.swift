@@ -99,7 +99,7 @@ struct AddExpenseSheet: View {
                         Task {
                             await viewModel.saveNewExpense(trip: trip, modelContext: modelContext, firestoreService: firestoreService)
                             totalExpensesSaved += 1
-                            if totalExpensesSaved == 10 {
+                            if totalExpensesSaved == 10 || (totalExpensesSaved > 10 && totalExpensesSaved % 50 == 0) {
                                 requestReview()
                             }
                             dismiss()

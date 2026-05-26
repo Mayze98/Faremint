@@ -7,7 +7,6 @@ final class StoreKitService {
     // MARK: - Constants
 
     static let proMonthlyProductID = "com.travelwise.pro.monthly"
-    private static let superuserEmail = "yzafc888@gmail.com"
     static let freeTripsLimit = 2
 
     // MARK: - State
@@ -32,14 +31,9 @@ final class StoreKitService {
 
     // MARK: - Computed
 
-    var isSuperuser: Bool {
-        guard let email = currentUserEmail else { return false }
-        return email.lowercased() == Self.superuserEmail.lowercased()
-    }
-
-    /// Single source of truth: paying subscriber OR hardcoded superuser.
+    /// Single source of truth: paying subscriber.
     var isProUser: Bool {
-        isSuperuser || isProSubscribed
+        isProSubscribed
     }
 
     /// Returns true if the user can create another trip (Pro users always can).

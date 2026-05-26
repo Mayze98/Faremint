@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseAuth
+import SwiftData
 
 @Observable
 final class AuthService {
@@ -37,7 +38,7 @@ final class AuthService {
         }
     }
 
-    func signUp(email: String, password: String, firstName: String, lastName: String, phoneNumber: String) async throws {
+    func signUp(email: String, password: String, firstName: String, lastName: String) async throws {
         let result = try await Auth.auth().createUser(withEmail: email, password: password)
         let user = result.user
 
@@ -63,8 +64,20 @@ final class AuthService {
         currentUser = nil
     }
 
-    func deleteAccount() async throws {
+    /// Deletes all remote data (Firestore + Storage), clears local data, then
+    /// deletes the Firebase Auth account. Call from a @MainActor context.
+    @MainActor
+    func deleteAccount(firestoreService: FirestoreService, modelContext: ModelContext) async throws {
         guard let user = Auth.auth().currentUser else { return }
+        let uid = user.uid
+
+        // 1. Delete all Firestore documents and Storage photos for this user.
+        try await firestoreService.deleteAllUserData(userID: uid)
+
+        // 2. Clear local SwiftData store.
+        firestoreService.clearLocalData(context: modelContext)
+
+        // 3. Delete the Firebase Auth account last (requires recent login).
         try await user.delete()
         currentUser = nil
     }

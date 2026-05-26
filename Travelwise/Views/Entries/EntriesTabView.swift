@@ -34,12 +34,17 @@ struct EntriesTabView: View {
                                 showingProUpgrade = true
                             }
                         } label: {
-                            Image(systemName: "airplane.departure")
-                                .font(.title3)
-                                .foregroundStyle(Theme.accentTeal)
-                                .frame(width: 40, height: 40)
-                                .background(Theme.accentTeal.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("New Trip")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundStyle(Theme.accentTeal)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Theme.accentTeal.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         Button {
                             showingPastTrips = true

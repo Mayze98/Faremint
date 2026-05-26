@@ -37,7 +37,9 @@ final class Trip {
             let dayAfterEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate))!
             return today >= dayAfterEnd
         }
-        return calendar.component(.year, from: startDate) < calendar.component(.year, from: .now)
+        // No end date: consider a trip "past" if it started more than 90 days ago.
+        let cutoff = calendar.date(byAdding: .day, value: -90, to: today)!
+        return startDate < cutoff
     }
 
     init(

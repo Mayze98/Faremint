@@ -8,7 +8,7 @@ struct LoginView: View {
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case firstName, lastName, phone, email, password, confirmPassword
+        case firstName, lastName, email, password, confirmPassword
     }
 
     var body: some View {
@@ -44,21 +44,6 @@ struct LoginView: View {
 
                                 formField(label: "Last Name", placeholder: "Doe", text: $viewModel.lastName, field: .lastName)
                                     .textContentType(.familyName)
-                            }
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-
-                            // Phone
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Phone Number")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                TextField("+1 (555) 123-4567", text: $viewModel.phoneNumber)
-                                    .textContentType(.telephoneNumber)
-                                    .keyboardType(.phonePad)
-                                    .focused($focusedField, equals: .phone)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
-                                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }

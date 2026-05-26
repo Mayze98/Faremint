@@ -7,7 +7,6 @@ final class AuthViewModel {
     var confirmPassword = ""
     var firstName = ""
     var lastName = ""
-    var phoneNumber = ""
     var isSignUp = false
     var errorMessage: String?
     var isProcessing = false
@@ -18,8 +17,7 @@ final class AuthViewModel {
         if isSignUp {
             let nameValid = !firstName.trimmingCharacters(in: .whitespaces).isEmpty
                 && !lastName.trimmingCharacters(in: .whitespaces).isEmpty
-            let phoneValid = phoneNumber.filter(\.isNumber).count >= 7
-            return nameValid && phoneValid && emailValid && passwordValid && password == confirmPassword
+            return nameValid && emailValid && passwordValid && password == confirmPassword
         }
         return emailValid && passwordValid
     }
@@ -35,8 +33,7 @@ final class AuthViewModel {
                     email: email.trimmingCharacters(in: .whitespaces),
                     password: password,
                     firstName: firstName.trimmingCharacters(in: .whitespaces),
-                    lastName: lastName.trimmingCharacters(in: .whitespaces),
-                    phoneNumber: phoneNumber.trimmingCharacters(in: .whitespaces)
+                    lastName: lastName.trimmingCharacters(in: .whitespaces)
                 )
             } else {
                 try await authService.signIn(
@@ -55,6 +52,5 @@ final class AuthViewModel {
         confirmPassword = ""
         firstName = ""
         lastName = ""
-        phoneNumber = ""
     }
 }

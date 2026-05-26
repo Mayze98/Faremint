@@ -36,7 +36,7 @@
       "localizations" : [
 
       ],
-      "name" : "travelwise_pro",
+      "name" : "faremint_pro",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -61,7 +61,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.travelwise.pro.monthly",
+          "productID" : "com.faremint.pro.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Pro Monthly Subscription",
           "subscriptionGroupID" : "C16C33EF",

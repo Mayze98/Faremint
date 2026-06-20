@@ -3,12 +3,10 @@ import SwiftData
 
 struct SettingsTabView: View {
     @Environment(AuthService.self) private var authService
-    @Environment(StoreKitService.self) private var storeKitService
     @Query private var trips: [Trip]
     @AppStorage("appearanceMode") private var appearanceMode = 0
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var showingSignOutAlert = false
-    @State private var showingProUpgrade = false
 
     var body: some View {
         NavigationStack {
@@ -23,57 +21,6 @@ struct SettingsTabView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.horizontal)
-
-                    // Pro section
-                    if storeKitService.isProUser {
-                        SettingsSection(title: "FAREMINT PRO") {
-                            HStack(spacing: 14) {
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.yellow)
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.yellow.opacity(0.12))
-                                    .clipShape(Circle())
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Pro Active")
-                                        .font(.subheadline.weight(.medium))
-                                    Text("Subscription active")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundStyle(.green)
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    } else {
-                        SettingsSection(title: "FAREMINT PRO") {
-                            Button { showingProUpgrade = true } label: {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "crown.fill")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.yellow)
-                                        .frame(width: 36, height: 36)
-                                        .background(Color.yellow.opacity(0.12))
-                                        .clipShape(Circle())
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Upgrade to Pro")
-                                            .font(.subheadline.weight(.medium))
-                                        Text("Maps, Photos, Exports & more")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .padding(.vertical, 8)
-                            }
-                            .tint(.primary)
-                        }
-                    }
 
                     // Account section
                     SettingsSection(title: "ACCOUNT") {
@@ -147,20 +94,10 @@ struct SettingsTabView: View {
 
                     // Export section
                     SettingsSection(title: "EXPORT DATA") {
-                        if storeKitService.isProUser {
-                            let csvURL = CSVExporter.csvFileURL(for: trips)
-                            let pdfURL = PDFExporter.pdfFileURL(for: trips, currencyCode: currencyCode)
-                            if let url = csvURL {
-                                ShareLink(item: url, preview: SharePreview("Faremint Export", image: Image(systemName: "doc.text"))) {
-                                    SettingsRowView(
-                                        icon: "arrow.down.circle",
-                                        iconColor: .blue,
-                                        title: "Export CSV",
-                                        subtitle: "Download your trips as CSV"
-                                    )
-                                }
-                                .tint(.primary)
-                            } else {
+                        let csvURL = CSVExporter.csvFileURL(for: trips)
+                        let pdfURL = PDFExporter.pdfFileURL(for: trips, currencyCode: currencyCode)
+                        if let url = csvURL {
+                            ShareLink(item: url, preview: SharePreview("Faremint Export", image: Image(systemName: "doc.text"))) {
                                 SettingsRowView(
                                     icon: "arrow.down.circle",
                                     iconColor: .blue,
@@ -168,72 +105,34 @@ struct SettingsTabView: View {
                                     subtitle: "Download your trips as CSV"
                                 )
                             }
-                            if let url = pdfURL {
-                                Divider()
-                                ShareLink(item: url, preview: SharePreview("PDF Summary", image: Image(systemName: "doc.richtext"))) {
-                                    SettingsRowView(
-                                        icon: "doc.richtext",
-                                        iconColor: .orange,
-                                        title: "Export PDF Summary",
-                                        subtitle: "Trip summaries with category charts"
-                                    )
-                                }
-                                .tint(.primary)
-                                Divider()
-                                ShareLink(item: url, preview: SharePreview("Tax Report", image: Image(systemName: "doc.text.magnifyingglass"))) {
-                                    SettingsRowView(
-                                        icon: "doc.text.magnifyingglass",
-                                        iconColor: .green,
-                                        title: "Export Tax Report",
-                                        subtitle: "Chronological expense list for tax filing"
-                                    )
-                                }
-                                .tint(.primary)
-                            }
+                            .tint(.primary)
                         } else {
-                            Button { showingProUpgrade = true } label: {
-                                VStack(spacing: 0) {
-                                    // Blurred preview of actual export rows
-                                    VStack(spacing: 0) {
-                                        SettingsRowView(
-                                            icon: "arrow.down.circle",
-                                            iconColor: .blue,
-                                            title: "Export CSV",
-                                            subtitle: "Download your trips as CSV"
-                                        )
-                                        Divider()
-                                        SettingsRowView(
-                                            icon: "doc.richtext",
-                                            iconColor: .orange,
-                                            title: "Export PDF Summary",
-                                            subtitle: "Trip summaries with category charts"
-                                        )
-                                        Divider()
-                                        SettingsRowView(
-                                            icon: "doc.text.magnifyingglass",
-                                            iconColor: .green,
-                                            title: "Export Tax Report",
-                                            subtitle: "Chronological expense list for tax filing"
-                                        )
-                                    }
-                                    .blur(radius: 4)
-                                    .allowsHitTesting(false)
-
-                                    // Upgrade overlay
-                                    VStack(spacing: 6) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "lock.fill")
-                                                .font(.caption.weight(.semibold))
-                                            Text("Upgrade to Pro")
-                                                .font(.subheadline.weight(.semibold))
-                                        }
-                                        .foregroundStyle(Theme.accentTeal)
-                                        Text("Export your trips as CSV, PDF & tax reports")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.vertical, 10)
-                                }
+                            SettingsRowView(
+                                icon: "arrow.down.circle",
+                                iconColor: .blue,
+                                title: "Export CSV",
+                                subtitle: "Download your trips as CSV"
+                            )
+                        }
+                        if let url = pdfURL {
+                            Divider()
+                            ShareLink(item: url, preview: SharePreview("PDF Summary", image: Image(systemName: "doc.richtext"))) {
+                                SettingsRowView(
+                                    icon: "doc.richtext",
+                                    iconColor: .orange,
+                                    title: "Export PDF Summary",
+                                    subtitle: "Trip summaries with category charts"
+                                )
+                            }
+                            .tint(.primary)
+                            Divider()
+                            ShareLink(item: url, preview: SharePreview("Tax Report", image: Image(systemName: "doc.text.magnifyingglass"))) {
+                                SettingsRowView(
+                                    icon: "doc.text.magnifyingglass",
+                                    iconColor: .green,
+                                    title: "Export Tax Report",
+                                    subtitle: "Chronological expense list for tax filing"
+                                )
                             }
                             .tint(.primary)
                         }
@@ -272,9 +171,6 @@ struct SettingsTabView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-            .sheet(isPresented: $showingProUpgrade) {
-                ProUpgradeView()
-            }
         }
     }
 }
@@ -305,5 +201,4 @@ struct SettingsSection<Content: View>: View {
 #Preview {
     SettingsTabView()
         .environment(AuthService())
-        .environment(StoreKitService())
 }

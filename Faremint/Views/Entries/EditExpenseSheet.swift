@@ -7,12 +7,10 @@ struct EditExpenseSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
 
-    @Environment(StoreKitService.self) private var storeKitService
     @State private var viewModel: ExpenseFormViewModel
     @State private var categories: [ExpenseCategory]
     @State private var showingNewCategorySheet = false
     @State private var isEditingCategories = false
-    @State private var showingProUpgrade = false
     @State private var isSaving = false
 
     init(expense: Expense, categories: [ExpenseCategory], currencyCode: String) {
@@ -41,53 +39,13 @@ struct EditExpenseSheet: View {
                         .lineLimit(3...6)
                 }
 
-                // Show location picker if Pro, or if the expense already has a location (preserve existing data after downgrade)
-                if storeKitService.isProUser || viewModel.hasLocation {
-                    LocationPickerSection(
-                        locationName: $viewModel.locationName,
-                        latitude: $viewModel.latitude,
-                        longitude: $viewModel.longitude
-                    )
-                } else {
-                    Section {
-                        Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .font(.body)
-                                    .foregroundStyle(.tertiary)
-                                Text("Add location")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tertiary)
-                                Spacer()
-                                proBadge
-                            }
-                        }
-                    } header: {
-                        Text("Location")
-                    }
-                }
+                LocationPickerSection(
+                    locationName: $viewModel.locationName,
+                    latitude: $viewModel.latitude,
+                    longitude: $viewModel.longitude
+                )
 
-                // Show picker if Pro, or if the expense already has a photo (preserve existing data after downgrade)
-                if storeKitService.isProUser || viewModel.photoData != nil {
-                    PhotoPickerSection(imageData: $viewModel.photoData)
-                } else {
-                    Section {
-                        Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "camera.fill")
-                                    .font(.body)
-                                    .foregroundStyle(.tertiary)
-                                Text("Add photo")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tertiary)
-                                Spacer()
-                                proBadge
-                            }
-                        }
-                    } header: {
-                        Text("Picture")
-                    }
-                }
+                PhotoPickerSection(imageData: $viewModel.photoData)
             }
             .navigationTitle("Edit Expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -115,17 +73,7 @@ struct EditExpenseSheet: View {
             .task {
                 await viewModel.fetchExchangeRate()
             }
-            .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
         }
-    }
-
-    private var proBadge: some View {
-        Text("PRO")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Theme.accentTeal, in: Capsule())
     }
 
     // MARK: - Amount Section

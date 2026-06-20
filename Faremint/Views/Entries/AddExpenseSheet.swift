@@ -8,11 +8,9 @@ struct AddExpenseSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(FirestoreService.self) private var firestoreService
 
-    @Environment(StoreKitService.self) private var storeKitService
     @State private var viewModel: ExpenseFormViewModel
     @State private var showingNewCategorySheet = false
     @State private var isEditingCategories = false
-    @State private var showingProUpgrade = false
     @State private var isSaving = false
     @AppStorage("totalExpensesSaved") private var totalExpensesSaved = 0
     @Environment(\.requestReview) private var requestReview
@@ -41,51 +39,13 @@ struct AddExpenseSheet: View {
                         .lineLimit(3...6)
                 }
 
-                if storeKitService.isProUser {
-                    LocationPickerSection(
-                        locationName: $viewModel.locationName,
-                        latitude: $viewModel.latitude,
-                        longitude: $viewModel.longitude
-                    )
-                } else {
-                    Section {
-                        Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .font(.body)
-                                    .foregroundStyle(.tertiary)
-                                Text("Add location")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tertiary)
-                                Spacer()
-                                proBadge
-                            }
-                        }
-                    } header: {
-                        Text("Location")
-                    }
-                }
+                LocationPickerSection(
+                    locationName: $viewModel.locationName,
+                    latitude: $viewModel.latitude,
+                    longitude: $viewModel.longitude
+                )
 
-                if storeKitService.isProUser {
-                    PhotoPickerSection(imageData: $viewModel.photoData)
-                } else {
-                    Section {
-                        Button { showingProUpgrade = true } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "camera.fill")
-                                    .font(.body)
-                                    .foregroundStyle(.tertiary)
-                                Text("Add photo")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tertiary)
-                                Spacer()
-                                proBadge
-                            }
-                        }
-                    } header: {
-                        Text("Picture")
-                    }
-                }
+                PhotoPickerSection(imageData: $viewModel.photoData)
             }
             .navigationTitle("New Expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -117,17 +77,7 @@ struct AddExpenseSheet: View {
             .task {
                 await viewModel.fetchExchangeRate()
             }
-            .sheet(isPresented: $showingProUpgrade) { ProUpgradeView() }
         }
-    }
-
-    private var proBadge: some View {
-        Text("PRO")
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Theme.accentTeal, in: Capsule())
     }
 
     // MARK: - Amount Section
@@ -310,5 +260,4 @@ struct AddExpenseSheet: View {
     AddExpenseSheet(trip: trip)
         .modelContainer(SampleData.container)
         .environment(FirestoreService())
-        .environment(StoreKitService())
 }

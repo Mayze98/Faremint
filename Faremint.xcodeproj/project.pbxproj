@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		525285392F7343E7001D9367 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 525285382F7343E7001D9367 /* Products.storekit */; };
 		525287692FC52BE4001D9367 /* firestore.rules in Resources */ = {isa = PBXBuildFile; fileRef = 525287682FC52BE4001D9367 /* firestore.rules */; };
 		5252876B2FC52BE9001D9367 /* storage.rules in Resources */ = {isa = PBXBuildFile; fileRef = 5252876A2FC52BE9001D9367 /* storage.rules */; };
 		526E28C82F68AF24000DE26C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 526E28C72F68AF24000DE26C /* README.md */; };
@@ -27,7 +26,6 @@
 
 /* Begin PBXFileReference section */
 		525284B02F71EE0A001D9367 /* Faremint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Faremint.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		525285382F7343E7001D9367 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		525287682FC52BE4001D9367 /* firestore.rules */ = {isa = PBXFileReference; lastKnownFileType = text; path = firestore.rules; sourceTree = "<group>"; };
 		5252876A2FC52BE9001D9367 /* storage.rules */ = {isa = PBXFileReference; lastKnownFileType = text; path = storage.rules; sourceTree = "<group>"; };
 		526E28C72F68AF24000DE26C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -67,7 +65,6 @@
 		526E28AD2F68ACD9000DE26C = {
 			isa = PBXGroup;
 			children = (
-				525285382F7343E7001D9367 /* Products.storekit */,
 				526E28B82F68ACD9000DE26C /* Faremint */,
 				526E28C72F68AF24000DE26C /* README.md */,
 				525284B02F71EE0A001D9367 /* Faremint.app */,
@@ -155,7 +152,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				525285392F7343E7001D9367 /* Products.storekit in Resources */,
 				526E28C82F68AF24000DE26C /* README.md in Resources */,
 				525287692FC52BE4001D9367 /* firestore.rules in Resources */,
 				5252876B2FC52BE9001D9367 /* storage.rules in Resources */,
@@ -334,6 +330,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CX9P6A84SZ;
@@ -352,6 +349,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mayze.Faremint;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

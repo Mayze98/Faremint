@@ -4,8 +4,6 @@ import Charts
 struct SpendingPieChart: View {
     let categoryTotals: [CategoryTotal]
     let currencyCode: String
-    var isProUser: Bool = true
-    var onUpgradeTapped: (() -> Void)? = nil
 
     @State private var selectedTab: CategoryTab = .chart
 
@@ -60,11 +58,7 @@ struct SpendingPieChart: View {
                 case .chart:
                     chartView
                 case .breakdown:
-                    if isProUser {
-                        breakdownView
-                    } else {
-                        lockedBreakdownView
-                    }
+                    breakdownView
                 }
             }
         }
@@ -147,48 +141,6 @@ struct SpendingPieChart: View {
                 }
             }
         }
-    }
-    // MARK: - Locked breakdown (free users)
-
-    private var lockedBreakdownView: some View {
-        Button { onUpgradeTapped?() } label: {
-            VStack(spacing: 16) {
-                // Show first 2 categories blurred/faded as a teaser
-                ForEach(categoryTotals.prefix(2)) { cat in
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(stableColorForCategory(cat.name))
-                            .frame(width: 10, height: 10)
-                        Text(cat.name)
-                            .font(.subheadline)
-                        Spacer()
-                        Text(CurrencyHelper.format(cat.total, code: currencyCode))
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                    }
-                    .padding(.horizontal)
-                }
-                .blur(radius: 8)
-                .allowsHitTesting(false)
-
-                // Upgrade prompt
-                VStack(spacing: 6) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                        Text("Upgrade to Pro")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .foregroundStyle(Theme.accentTeal)
-                    Text("See full category breakdown with amounts")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 4)
-            }
-            .padding(.vertical, 8)
-        }
-        .buttonStyle(.plain)
     }
 }
 

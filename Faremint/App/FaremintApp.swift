@@ -7,7 +7,6 @@ import FirebaseAuth
 struct FaremintApp: App {
     @State private var authService: AuthService
     @State private var firestoreService = FirestoreService()
-    @State private var storeKitService = StoreKitService()
     let container: ModelContainer
 
     init() {
@@ -21,10 +20,8 @@ struct FaremintApp: App {
             ContentView()
                 .environment(authService)
                 .environment(firestoreService)
-                .environment(storeKitService)
                 .onAppear {
                     NotificationService.shared.requestAuthorization()
-                    storeKitService.currentUserEmail = authService.userEmail
                 }
                 // Called whenever Firebase resolves the auth state — on launch,
                 // sign-in, sign-out, and account switches.
@@ -37,11 +34,6 @@ struct FaremintApp: App {
                 .onChange(of: authService.isLoading) { _, isLoading in
                     guard !isLoading else { return }
                     handleAuthChange(newUID: authService.currentUser?.uid)
-                }
-                // Keep Pro email in sync with the signed-in account.
-                .onChange(of: authService.userEmail) { _, newEmail in
-                    storeKitService.currentUserEmail = newEmail
-                    Task { await storeKitService.updateSubscriptionStatus() }
                 }
                 // Re-sync whenever the app returns to the foreground.
                 .onReceive(NotificationCenter.default.publisher(
@@ -74,7 +66,6 @@ struct FaremintApp: App {
             }
         } else {
             firestoreService.clearLocalData(context: container.mainContext)
-            storeKitService.currentUserEmail = nil
         }
     }
 }

@@ -5,7 +5,6 @@ import SwiftData
 struct TripDetailInlineView: View {
     @Bindable var trip: Trip
     @Environment(\.modelContext) private var modelContext
-    @Environment(StoreKitService.self) private var storeKitService
     @Environment(FirestoreService.self) private var firestoreService
     @AppStorage("currencyCode") private var homeCurrency = "CAD"
     @State private var showingAddExpense = false
@@ -79,21 +78,19 @@ struct TripDetailInlineView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    // Pro: rebalance button when any category is overspent
-                    if storeKitService.isProUser {
-                        let suggestions = BudgetRebalancer.rebalance(trip: trip)
-                        if !suggestions.isEmpty {
-                            Button {
-                                rebalanceSuggestions = suggestions
-                                showingRebalanceSheet = true
-                            } label: {
-                                Label("Rebalance Budget", systemImage: "arrow.triangle.branch")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(Theme.accentTeal)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.top, 2)
+                    // Rebalance button when any category is overspent
+                    let suggestions = BudgetRebalancer.rebalance(trip: trip)
+                    if !suggestions.isEmpty {
+                        Button {
+                            rebalanceSuggestions = suggestions
+                            showingRebalanceSheet = true
+                        } label: {
+                            Label("Rebalance Budget", systemImage: "arrow.triangle.branch")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Theme.accentTeal)
                         }
+                        .buttonStyle(.plain)
+                        .padding(.top, 2)
                     }
                 }
                 .padding(.vertical, 4)

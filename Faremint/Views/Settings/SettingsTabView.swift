@@ -3,10 +3,15 @@ import SwiftData
 
 struct SettingsTabView: View {
     @Environment(AuthService.self) private var authService
+    @Environment(FirestoreService.self) private var firestoreService
+    @Environment(\.modelContext) private var modelContext
     @Query private var trips: [Trip]
     @AppStorage("appearanceMode") private var appearanceMode = 0
     @AppStorage("currencyCode") private var currencyCode = "CAD"
     @State private var showingSignOutAlert = false
+    @State private var showingDeleteAccountAlert = false
+    @State private var isDeletingAccount = false
+    @State private var deleteAccountError: String?
 
     var body: some View {
         NavigationStack {
@@ -138,20 +143,75 @@ struct SettingsTabView: View {
                         }
                     }
 
-                    // Sign Out
-                    Button(role: .destructive) {
-                        showingSignOutAlert = true
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Sign Out")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer()
+                    // Sign Out & Delete Account
+                    SettingsSection(title: "ACCOUNT ACTIONS") {
+                        Button(role: .destructive) {
+                            showingSignOutAlert = true
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.orange)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.orange.opacity(0.12))
+                                    .clipShape(Circle())
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Sign Out")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.primary)
+                                    Text("You can sign back in anytime")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.vertical, 8)
                         }
-                        .padding(.vertical, 14)
-                        .background(.background, in: RoundedRectangle(cornerRadius: 14))
+                        .tint(.primary)
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            showingDeleteAccountAlert = true
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.red)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color.red.opacity(0.12))
+                                    .clipShape(Circle())
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Delete Account")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.red)
+                                    Text("Permanently delete your account and data")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if isDeletingAccount {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        .tint(.primary)
+                        .disabled(isDeletingAccount)
                     }
-                    .padding(.horizontal)
 
                     // Version
                     Text("Faremint v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
@@ -170,6 +230,33 @@ struct SettingsTabView: View {
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
+            }
+            .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete My Account", role: .destructive) {
+                    isDeletingAccount = true
+                    Task {
+                        do {
+                            try await authService.deleteAccount(
+                                firestoreService: firestoreService,
+                                modelContext: modelContext
+                            )
+                        } catch {
+                            deleteAccountError = AuthService.friendlyErrorMessage(for: error)
+                        }
+                        isDeletingAccount = false
+                    }
+                }
+            } message: {
+                Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+            }
+            .alert("Unable to Delete Account", isPresented: .init(
+                get: { deleteAccountError != nil },
+                set: { if !$0 { deleteAccountError = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(deleteAccountError ?? "")
             }
         }
     }
